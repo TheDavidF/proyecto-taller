@@ -1,5 +1,6 @@
 package com.proyecto.taller.repository;
 
+
 import com.proyecto.taller.entity.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
