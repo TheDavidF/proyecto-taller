@@ -6,3 +6,4 @@ import com.proyecto.taller.entity.Servicio;
 
 public interface ServicioRepository extends JpaRepository<Servicio, Integer> {
 }
+
