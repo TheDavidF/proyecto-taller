@@ -1,40 +1,40 @@
 package com.proyecto.taller.dto;
 
 public class PerfilDTO {
-    private Long id;
+    private Integer idPerfil;
     private String nombre;
-    private String descripcion;
+    private Boolean estado;
 
     public PerfilDTO() {
     }
 
-    public PerfilDTO(Long id, String nombre, String descripcion) {
-        this.id = id;
+    public PerfilDTO(Integer idPerfil, String nombre, Boolean estado) {
+        this.idPerfil = idPerfil;
         this.nombre = nombre;
-        this.descripcion = descripcion;
+        this.estado = estado;
     }
 
-    public Long getId() { 
-        return id; 
-    }
-    
-    public void setId(Long id) { 
-        this.id = id; 
+    public Integer getIdPerfil() {
+        return idPerfil;
     }
 
-    public String getNombre() { 
-        return nombre; 
-    }
-    
-    public void setNombre(String nombre) { 
-        this.nombre = nombre; 
+    public void setIdPerfil(Integer idPerfil) {
+        this.idPerfil = idPerfil;
     }
 
-    public String getDescripcion() { 
-        return descripcion; 
+    public String getNombre() {
+        return nombre;
     }
-    
-    public void setDescripcion(String descripcion) { 
-        this.descripcion = descripcion; 
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public Boolean getEstado() {
+        return estado;
+    }
+
+    public void setEstado(Boolean estado) {
+        this.estado = estado;
     }
 }

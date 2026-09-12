@@ -20,7 +20,7 @@ public class ServicioController {
     }
 
     @GetMapping("/{id}")
-    public ServicioDTO obtenerPorId(@PathVariable Long id) {
+    public ServicioDTO obtenerPorId(@PathVariable Integer id) {
         return servicioService.obtenerPorId(id);
     }
 
@@ -30,7 +30,7 @@ public class ServicioController {
     }
 
     @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Long id) {
+    public void eliminar(@PathVariable Integer id) {
         servicioService.eliminar(id);
     }
 }

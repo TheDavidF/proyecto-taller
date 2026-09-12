@@ -3,7 +3,6 @@ package com.proyecto.taller.service;
 import com.proyecto.taller.dto.PerfilDTO;
 import com.proyecto.taller.entity.Perfil;
 import com.proyecto.taller.repository.PerfilRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,8 +11,11 @@ import java.util.stream.Collectors;
 @Service
 public class PerfilService {
 
-    @Autowired
-    private PerfilRepository perfilRepository;
+    private final PerfilRepository perfilRepository;
+
+    public PerfilService(PerfilRepository perfilRepository) {
+        this.perfilRepository = perfilRepository;
+    }
 
     public List<PerfilDTO> listarTodos() {
         return perfilRepository.findAll().stream()
@@ -21,7 +23,7 @@ public class PerfilService {
                 .collect(Collectors.toList());
     }
 
-    public PerfilDTO obtenerPorId(Long id) {
+    public PerfilDTO obtenerPorId(Integer id) {
         Perfil perfil = perfilRepository.findById(id).orElse(null);
         return perfil != null ? convertirADto(perfil) : null;
     }
@@ -32,23 +34,23 @@ public class PerfilService {
         return convertirADto(guardado);
     }
 
-    public void eliminar(Long id) {
+    public void eliminar(Integer id) {
         perfilRepository.deleteById(id);
     }
 
     private PerfilDTO convertirADto(Perfil perfil) {
         PerfilDTO dto = new PerfilDTO();
-        dto.setId(perfil.getId());
+        dto.setIdPerfil(perfil.getIdPerfil());
         dto.setNombre(perfil.getNombre());
-        dto.setDescripcion(perfil.getDescripcion());
+        dto.setEstado(perfil.getEstado());
         return dto;
     }
 
     private Perfil convertirAEntidad(PerfilDTO dto) {
         Perfil perfil = new Perfil();
-        perfil.setId(dto.getId());
+        perfil.setIdPerfil(dto.getIdPerfil());
         perfil.setNombre(dto.getNombre());
-        perfil.setDescripcion(dto.getDescripcion());
+        perfil.setEstado(dto.getEstado() != null ? dto.getEstado() : true);
         return perfil;
     }
 }

@@ -20,7 +20,7 @@ public class PerfilController {
     }
 
     @GetMapping("/{id}")
-    public PerfilDTO obtenerPorId(@PathVariable Long id) {
+    public PerfilDTO obtenerPorId(@PathVariable Integer id) {
         return perfilService.obtenerPorId(id);
     }
 
@@ -30,7 +30,7 @@ public class PerfilController {
     }
 
     @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Long id) {
+    public void eliminar(@PathVariable Integer id) {
         perfilService.eliminar(id);
     }
 }

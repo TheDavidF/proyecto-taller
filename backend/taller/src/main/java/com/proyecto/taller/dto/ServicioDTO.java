@@ -1,40 +1,52 @@
 package com.proyecto.taller.dto;
 
+import java.math.BigDecimal;
+
 public class ServicioDTO {
-    private Long id;
+    private Integer idServicio;
     private String nombre;
-    private Double precio;
+    private BigDecimal precioBase;
+    private Boolean estado;
 
     public ServicioDTO() {
     }
 
-    public ServicioDTO(Long id, String nombre, Double precio) {
-        this.id = id;
+    public ServicioDTO(Integer idServicio, String nombre, BigDecimal precioBase, Boolean estado) {
+        this.idServicio = idServicio;
         this.nombre = nombre;
-        this.precio = precio;
+        this.precioBase = precioBase;
+        this.estado = estado;
     }
 
-    public Long getId() { 
-        return id; 
-    }
-    
-    public void setId(Long id) { 
-        this.id = id; 
+    public Integer getIdServicio() {
+        return idServicio;
     }
 
-    public String getNombre() { 
-        return nombre; 
-    }
-    
-    public void setNombre(String nombre) { 
-        this.nombre = nombre; 
+    public void setIdServicio(Integer idServicio) {
+        this.idServicio = idServicio;
     }
 
-    public Double getPrecio() { 
-        return precio; 
+    public String getNombre() {
+        return nombre;
     }
-    
-    public void setPrecio(Double precio) { 
-        this.precio = precio; 
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public BigDecimal getPrecioBase() {
+        return precioBase;
+    }
+
+    public void setPrecioBase(BigDecimal precioBase) {
+        this.precioBase = precioBase;
+    }
+
+    public Boolean getEstado() {
+        return estado;
+    }
+
+    public void setEstado(Boolean estado) {
+        this.estado = estado;
     }
 }
