@@ -11,7 +11,7 @@ import lombok.Setter;
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_usuario", columnNames = "usuario")
     }
-)
+)  
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,4 +40,7 @@ public class Usuario {
 
     @Column(name = "estado", nullable = false)
     private Boolean estado = true;
+
+
+
 }

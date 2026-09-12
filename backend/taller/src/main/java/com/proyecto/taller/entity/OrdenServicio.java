@@ -2,6 +2,8 @@ package com.proyecto.taller.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -13,7 +15,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-
 public class OrdenServicio {
 
     @Id
@@ -48,4 +49,7 @@ public class OrdenServicio {
 
     @Column(name = "estado", nullable = false)
     private Boolean estado = true;
+
+    @OneToMany(mappedBy = "ordenServicio", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DetalleOrden> detalles = new ArrayList<>();
 }
