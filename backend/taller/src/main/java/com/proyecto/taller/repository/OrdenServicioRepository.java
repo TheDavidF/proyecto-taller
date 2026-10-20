@@ -5,4 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.proyecto.taller.entity.OrdenServicio;
 
 public interface OrdenServicioRepository extends JpaRepository<OrdenServicio, Integer> {
+
+    
+    
 }
