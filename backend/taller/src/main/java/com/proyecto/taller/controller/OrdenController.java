@@ -29,8 +29,8 @@ public class OrdenController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrdenDto>> listar() {
-        return ResponseEntity.ok(ordenServicioService.listar());
+    public ResponseEntity<List<OrdenDto>> listar(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean incluirInactivos) {
+        return ResponseEntity.ok(ordenServicioService.listar(incluirInactivos));
     }
 
     @GetMapping("/{id}")
@@ -46,6 +46,17 @@ public class OrdenController {
     @PutMapping("/{id}")
     public ResponseEntity<OrdenDto> actualizar(@PathVariable Integer id, @Valid @RequestBody OrdenDto dto) {
         return ResponseEntity.ok(ordenServicioService.actualizar(id, dto));
+    }
+
+    @PutMapping("/{id}/anular")
+    public ResponseEntity<Void> anular(@PathVariable Integer id) {
+        ordenServicioService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/activar")
+    public ResponseEntity<OrdenDto> activar(@PathVariable Integer id) {
+        return ResponseEntity.ok(ordenServicioService.activar(id));
     }
 
     @DeleteMapping("/{id}")

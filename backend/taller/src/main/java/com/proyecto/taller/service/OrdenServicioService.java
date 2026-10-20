@@ -1,194 +1,105 @@
 package com.proyecto.taller.service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
+import java.util.*;
+import com.proyecto.taller.dto.*;
+import com.proyecto.taller.entity.*;
+import com.proyecto.taller.repository.*;
+import com.proyecto.taller.exception.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.proyecto.taller.dto.DetalleOrdenDto;
-import com.proyecto.taller.dto.OrdenDto;
-import com.proyecto.taller.entity.DetalleOrden;
-import com.proyecto.taller.entity.OrdenServicio;
-import com.proyecto.taller.entity.Servicio;
-import com.proyecto.taller.entity.Usuario;
-import com.proyecto.taller.entity.Vehiculo;
-import com.proyecto.taller.repository.DetalleOrdenRepository;
-import com.proyecto.taller.repository.OrdenServicioRepository;
-import com.proyecto.taller.repository.ServicioRepository;
-import com.proyecto.taller.repository.UsuarioRepository;
-import com.proyecto.taller.repository.VehiculoRepository;
-
-import jakarta.persistence.EntityNotFoundException;
-
 @Service
+@Transactional
 public class OrdenServicioService {
-
-    private final OrdenServicioRepository ordenServicioRepository;
-    private final DetalleOrdenRepository detalleOrdenRepository;
-    private final VehiculoRepository vehiculoRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final ServicioRepository servicioRepository;
-
-    public OrdenServicioService(OrdenServicioRepository ordenServicioRepository,
-                               DetalleOrdenRepository detalleOrdenRepository,
-                               VehiculoRepository vehiculoRepository,
-                               UsuarioRepository usuarioRepository,
-                               ServicioRepository servicioRepository) {
-        this.ordenServicioRepository = ordenServicioRepository;
-        this.detalleOrdenRepository = detalleOrdenRepository;
-        this.vehiculoRepository = vehiculoRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.servicioRepository = servicioRepository;
+    private final OrdenServicioRepository repository;
+    private final VehiculoRepository vehiculos;
+    private final UsuarioRepository usuarios;
+    private final ServicioRepository servicios;
+    public OrdenServicioService(OrdenServicioRepository repository, VehiculoRepository vehiculos,
+            UsuarioRepository usuarios, ServicioRepository servicios) {
+        this.repository = repository; this.vehiculos = vehiculos;
+        this.usuarios = usuarios; this.servicios = servicios;
     }
-
-    @Transactional
-    public OrdenDto guardar(OrdenDto dto) {
-        Vehiculo vehiculo = vehiculoRepository.findById(dto.getIdVehiculo())
-                .orElseThrow(() -> new EntityNotFoundException("Vehículo no encontrado con id: " + dto.getIdVehiculo()));
-        Usuario usuario = usuarioRepository.findById(dto.getIdUsuario())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con id: " + dto.getIdUsuario()));
-
-        OrdenServicio orden = new OrdenServicio();
-        orden.setVehiculo(vehiculo);
-        orden.setUsuario(usuario);
-        orden.setFechaIngreso(dto.getFechaIngreso());
-        orden.setFechaEntrega(dto.getFechaEntrega());
-        orden.setEstadoOrden(dto.getEstadoOrden());
-        orden.setEstado(dto.getEstado() != null ? dto.getEstado() : true);
-
-        OrdenServicio ordenGuardada = ordenServicioRepository.save(orden);
-
-        List<DetalleOrden> detalles = new ArrayList<>();
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (DetalleOrdenDto detalleDto : dto.getDetalles()) {
-            Servicio servicio = servicioRepository.findById(detalleDto.getIdServicio())
-                    .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con id: " + detalleDto.getIdServicio()));
-
-            DetalleOrden detalle = new DetalleOrden();
-            detalle.setOrdenServicio(ordenGuardada);
-            detalle.setServicio(servicio);
-            detalle.setPrecioAplicado(detalleDto.getPrecioAplicado());
-            detalle.setObservaciones(detalleDto.getObservaciones());
-            detalle.setEstado(detalleDto.getEstado() != null ? detalleDto.getEstado() : true);
-            detalles.add(detalle);
-            total = total.add(detalleDto.getPrecioAplicado());
-        }
-
-        ordenGuardada.setDetalles(detalles);
-        detalleOrdenRepository.saveAll(detalles);
-        ordenGuardada.setTotal(total);
-        OrdenServicio ordenFinal = ordenServicioRepository.save(ordenGuardada);
-
-        return mapToDto(ordenFinal, detalles);
-    }
-
     @Transactional(readOnly = true)
-    public List<OrdenDto> listar() {
-        return ordenServicioRepository.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+    public List<OrdenDto> listar(boolean incluirInactivos) {
+        return (incluirInactivos ? repository.findAll() : repository.findByEstadoTrue())
+                .stream().map(this::toDto).toList();
     }
-
     @Transactional(readOnly = true)
-    public OrdenDto obtenerPorId(Integer idOrden) {
-        OrdenServicio orden = ordenServicioRepository.findById(idOrden)
-                .orElseThrow(() -> new EntityNotFoundException("Orden de servicio no encontrada con id: " + idOrden));
+    public OrdenDto obtenerPorId(Integer id) { return toDto(buscar(id)); }
+    public OrdenDto guardar(OrdenDto dto) { return guardar(null, dto); }
+    public OrdenDto actualizar(Integer id, OrdenDto dto) { return guardar(id, dto); }
 
-        return mapToDto(orden);
-    }
-
-    @Transactional
-    public OrdenDto actualizar(Integer idOrden, OrdenDto dto) {
-        OrdenServicio orden = ordenServicioRepository.findById(idOrden)
-                .orElseThrow(() -> new EntityNotFoundException("Orden de servicio no encontrada con id: " + idOrden));
-
-        Vehiculo vehiculo = vehiculoRepository.findById(dto.getIdVehiculo())
-                .orElseThrow(() -> new EntityNotFoundException("Vehículo no encontrado con id: " + dto.getIdVehiculo()));
-        Usuario usuario = usuarioRepository.findById(dto.getIdUsuario())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con id: " + dto.getIdUsuario()));
-
-        orden.setVehiculo(vehiculo);
-        orden.setUsuario(usuario);
-        orden.setFechaIngreso(dto.getFechaIngreso());
-        orden.setFechaEntrega(dto.getFechaEntrega());
+    private OrdenDto guardar(Integer id, OrdenDto dto) {
+        OrdenServicio orden = id == null ? new OrdenServicio() : buscar(id);
+        if (id != null && !Boolean.TRUE.equals(orden.getEstado()))
+            throw ApiException.conflicto("Activa la orden antes de modificarla");
+        if (dto.getFechaEntrega() != null && dto.getFechaEntrega().isBefore(dto.getFechaIngreso()))
+            throw ApiException.invalido("La fecha de entrega no puede ser anterior al ingreso");
+        Vehiculo vehiculo = vehiculos.findById(dto.getIdVehiculo())
+                .orElseThrow(() -> ApiException.noEncontrado("Vehículo"));
+        Usuario usuario = usuarios.findById(dto.getIdUsuario())
+                .orElseThrow(() -> ApiException.noEncontrado("Usuario"));
+        if (!Boolean.TRUE.equals(vehiculo.getEstado()) || !Boolean.TRUE.equals(usuario.getEstado())
+                || !Boolean.TRUE.equals(usuario.getPerfil().getEstado()))
+            throw ApiException.conflicto("El vehículo, usuario y perfil deben estar activos");
+        orden.setVehiculo(vehiculo); orden.setUsuario(usuario);
+        orden.setFechaIngreso(dto.getFechaIngreso()); orden.setFechaEntrega(dto.getFechaEntrega());
         orden.setEstadoOrden(dto.getEstadoOrden());
-        orden.setEstado(dto.getEstado() != null ? dto.getEstado() : true);
+        if (dto.getEstado() != null) orden.setEstado(dto.getEstado());
 
-        List<DetalleOrden> detallesActuales = detalleOrdenRepository.findByOrdenServicioIdOrden(idOrden);
-        if (!detallesActuales.isEmpty()) {
-            detalleOrdenRepository.deleteAll(detallesActuales);
-        }
-
-        List<DetalleOrden> nuevosDetalles = new ArrayList<>();
+        Map<Integer, DetalleOrden> existentes = new HashMap<>();
+        for (DetalleOrden d : orden.getDetalles()) existentes.put(d.getIdDetalleOrden(), d);
+        Set<Integer> usados = new HashSet<>();
+        List<DetalleOrden> resultado = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
-
-        for (DetalleOrdenDto detalleDto : dto.getDetalles()) {
-            Servicio servicio = servicioRepository.findById(detalleDto.getIdServicio())
-                    .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con id: " + detalleDto.getIdServicio()));
-
-            DetalleOrden detalle = new DetalleOrden();
-            detalle.setOrdenServicio(orden);
-            detalle.setServicio(servicio);
-            detalle.setPrecioAplicado(detalleDto.getPrecioAplicado());
-            detalle.setObservaciones(detalleDto.getObservaciones());
-            detalle.setEstado(detalleDto.getEstado() != null ? detalleDto.getEstado() : true);
-            nuevosDetalles.add(detalle);
-            total = total.add(detalleDto.getPrecioAplicado());
+        for (DetalleOrdenDto d : dto.getDetalles()) {
+            DetalleOrden detalle;
+            if (d.getIdDetalleOrden() == null) detalle = new DetalleOrden();
+            else {
+                detalle = existentes.get(d.getIdDetalleOrden());
+                if (detalle == null || !usados.add(d.getIdDetalleOrden()))
+                    throw ApiException.invalido("Detalle repetido o ajeno a la orden");
+            }
+            Servicio servicio = servicios.findById(d.getIdServicio())
+                    .orElseThrow(() -> ApiException.noEncontrado("Servicio"));
+            if (!Boolean.TRUE.equals(servicio.getEstado()))
+                throw ApiException.conflicto("El servicio está inactivo");
+            detalle.setOrdenServicio(orden); detalle.setServicio(servicio);
+            detalle.setPrecioAplicado(d.getPrecioAplicado()); detalle.setObservaciones(d.getObservaciones());
+            detalle.setEstado(d.getEstado() != null ? d.getEstado() : true);
+            resultado.add(detalle);
+            if (Boolean.TRUE.equals(detalle.getEstado())) total = total.add(detalle.getPrecioAplicado());
         }
-
-        orden.setDetalles(nuevosDetalles);
-        detalleOrdenRepository.saveAll(nuevosDetalles);
+        if (resultado.stream().noneMatch(d -> Boolean.TRUE.equals(d.getEstado())))
+            throw ApiException.invalido("La orden necesita al menos un detalle activo");
+        if (total.compareTo(new BigDecimal("99999999.99")) > 0)
+            throw ApiException.invalido("El total supera el límite permitido");
+        orden.getDetalles().removeIf(d -> !resultado.contains(d));
+        for (DetalleOrden d : resultado) if (!orden.getDetalles().contains(d)) orden.getDetalles().add(d);
         orden.setTotal(total);
-        OrdenServicio ordenActualizada = ordenServicioRepository.save(orden);
-
-        return mapToDto(ordenActualizada, nuevosDetalles);
+        return toDto(repository.saveAndFlush(orden));
     }
-
-    @Transactional
-    public void eliminar(Integer idOrden) {
-        OrdenServicio orden = ordenServicioRepository.findById(idOrden)
-                .orElseThrow(() -> new EntityNotFoundException("Orden de servicio no encontrada con id: " + idOrden));
-
-        List<DetalleOrden> detalles = detalleOrdenRepository.findByOrdenServicioIdOrden(idOrden);
-        if (!detalles.isEmpty()) {
-            detalleOrdenRepository.deleteAll(detalles);
-        }
-
-        ordenServicioRepository.delete(orden);
+    public void eliminar(Integer id) { buscar(id).setEstado(false); }
+    public OrdenDto activar(Integer id) {
+        OrdenServicio orden = buscar(id); orden.setEstado(true); return toDto(orden);
     }
-
-    private OrdenDto mapToDto(OrdenServicio orden) {
-        List<DetalleOrden> detalles = detalleOrdenRepository.findByOrdenServicioIdOrden(orden.getIdOrden());
-        return mapToDto(orden, detalles);
+    private OrdenServicio buscar(Integer id) {
+        return repository.findById(id).orElseThrow(() -> ApiException.noEncontrado("Orden"));
     }
-
-    private OrdenDto mapToDto(OrdenServicio orden, List<DetalleOrden> detalles) {
+    private OrdenDto toDto(OrdenServicio orden) {
         OrdenDto dto = new OrdenDto();
-        dto.setIdOrden(orden.getIdOrden());
-        dto.setIdVehiculo(orden.getVehiculo() != null ? orden.getVehiculo().getIdVehiculo() : null);
-        dto.setIdUsuario(orden.getUsuario() != null ? orden.getUsuario().getIdUsuario() : null);
-        dto.setFechaIngreso(orden.getFechaIngreso());
-        dto.setFechaEntrega(orden.getFechaEntrega());
-        dto.setTotal(orden.getTotal());
-        dto.setEstadoOrden(orden.getEstadoOrden());
-        dto.setEstado(orden.getEstado());
-        dto.setDetalles(detalles.stream().map(this::mapDetalleToDto).collect(Collectors.toList()));
-        return dto;
-    }
-
-    private DetalleOrdenDto mapDetalleToDto(DetalleOrden detalle) {
-        DetalleOrdenDto dto = new DetalleOrdenDto();
-        dto.setIdDetalleOrden(detalle.getIdDetalleOrden());
-        dto.setIdOrden(detalle.getOrdenServicio() != null ? detalle.getOrdenServicio().getIdOrden() : null);
-        dto.setIdServicio(detalle.getServicio() != null ? detalle.getServicio().getIdServicio() : null);
-        dto.setPrecioAplicado(detalle.getPrecioAplicado());
-        dto.setObservaciones(detalle.getObservaciones());
-        dto.setEstado(detalle.getEstado());
+        dto.setIdOrden(orden.getIdOrden()); dto.setIdVehiculo(orden.getVehiculo().getIdVehiculo());
+        dto.setIdUsuario(orden.getUsuario().getIdUsuario()); dto.setFechaIngreso(orden.getFechaIngreso());
+        dto.setFechaEntrega(orden.getFechaEntrega()); dto.setEstadoOrden(orden.getEstadoOrden());
+        dto.setEstado(orden.getEstado()); dto.setTotal(orden.getTotal());
+        dto.setDetalles(orden.getDetalles().stream().map(d -> {
+            DetalleOrdenDto out = new DetalleOrdenDto();
+            out.setIdDetalleOrden(d.getIdDetalleOrden()); out.setIdOrden(orden.getIdOrden());
+            out.setIdServicio(d.getServicio().getIdServicio()); out.setPrecioAplicado(d.getPrecioAplicado());
+            out.setObservaciones(d.getObservaciones()); out.setEstado(d.getEstado()); return out;
+        }).toList());
         return dto;
     }
 }
-

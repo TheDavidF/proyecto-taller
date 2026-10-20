@@ -1,57 +1,47 @@
 package com.proyecto.taller.service;
 
+import java.util.List;
 import com.proyecto.taller.dto.PerfilDTO;
 import com.proyecto.taller.entity.Perfil;
 import com.proyecto.taller.repository.PerfilRepository;
+import com.proyecto.taller.exception.ApiException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class PerfilService {
+    private final PerfilRepository repository;
+    public PerfilService(PerfilRepository repository) { this.repository = repository; }
 
-    private final PerfilRepository perfilRepository;
-
-    public PerfilService(PerfilRepository perfilRepository) {
-        this.perfilRepository = perfilRepository;
+    @Transactional(readOnly = true)
+    public List<PerfilDTO> listar(boolean incluirInactivos) {
+        return (incluirInactivos ? repository.findAll() : repository.findByEstadoTrue())
+                .stream().map(this::toDto).toList();
     }
-
-    public List<PerfilDTO> listarTodos() {
-        return perfilRepository.findAll().stream()
-                .map(this::convertirADto)
-                .collect(Collectors.toList());
+    public PerfilDTO obtenerPorId(Integer id) { return toDto(buscar(id)); }
+    public PerfilDTO crear(PerfilDTO dto) { return guardar(null, dto); }
+    public PerfilDTO actualizar(Integer id, PerfilDTO dto) { return guardar(id, dto); }
+    private PerfilDTO guardar(Integer id, PerfilDTO dto) {
+        Perfil entity = id == null ? new Perfil() : buscar(id);
+        entity.setNombre(dto.getNombre().trim());
+        if (dto.getEstado() != null) entity.setEstado(dto.getEstado());
+        return toDto(repository.save(entity));
     }
-
-    public PerfilDTO obtenerPorId(Integer id) {
-        Perfil perfil = perfilRepository.findById(id).orElse(null);
-        return perfil != null ? convertirADto(perfil) : null;
+    public void anular(Integer id) { buscar(id).setEstado(false); }
+    public PerfilDTO activar(Integer id) {
+        Perfil entity = buscar(id);
+        entity.setEstado(true);
+        return toDto(entity);
     }
-
-    public PerfilDTO guardar(PerfilDTO dto) {
-        Perfil perfil = convertirAEntidad(dto);
-        Perfil guardado = perfilRepository.save(perfil);
-        return convertirADto(guardado);
+    private Perfil buscar(Integer id) {
+        return repository.findById(id).orElseThrow(() -> ApiException.noEncontrado("Perfil"));
     }
-
-    public void eliminar(Integer id) {
-        perfilRepository.deleteById(id);
-    }
-
-    private PerfilDTO convertirADto(Perfil perfil) {
+    private PerfilDTO toDto(Perfil entity) {
         PerfilDTO dto = new PerfilDTO();
-        dto.setIdPerfil(perfil.getIdPerfil());
-        dto.setNombre(perfil.getNombre());
-        dto.setEstado(perfil.getEstado());
+        dto.setIdPerfil(entity.getIdPerfil());
+        dto.setNombre(entity.getNombre());
+        dto.setEstado(entity.getEstado());
         return dto;
     }
-
-    private Perfil convertirAEntidad(PerfilDTO dto) {
-        Perfil perfil = new Perfil();
-        perfil.setIdPerfil(dto.getIdPerfil());
-        perfil.setNombre(dto.getNombre());
-        perfil.setEstado(dto.getEstado() != null ? dto.getEstado() : true);
-        return perfil;
-    }
-
 }

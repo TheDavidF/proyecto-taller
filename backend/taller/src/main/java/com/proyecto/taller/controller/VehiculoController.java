@@ -1,50 +1,36 @@
 package com.proyecto.taller.controller;
 
-import com.proyecto.taller.entity.Vehiculo;
-import com.proyecto.taller.service.VehiculoService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import jakarta.validation.Valid;
+import com.proyecto.taller.dto.VehiculoDTO;
+import com.proyecto.taller.service.VehiculoService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/vehiculos")
 public class VehiculoController {
-
-    @Autowired
-    private VehiculoService vehiculoService;
-
+    private final VehiculoService service;
+    public VehiculoController(VehiculoService service) { this.service = service; }
     @GetMapping
-    public List<Vehiculo> listar() {
-        return vehiculoService.listarTodos();
+    public List<VehiculoDTO> listar(@RequestParam(defaultValue = "false") boolean incluirInactivos) {
+        return service.listar(incluirInactivos);
     }
-
     @GetMapping("/{id}")
-    public ResponseEntity<Vehiculo> obtenerPorId(@PathVariable Integer id) {
-        return vehiculoService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    public VehiculoDTO obtener(@PathVariable Integer id) { return service.obtenerPorId(id); }
     @PostMapping
-    public Vehiculo crear(@RequestBody Vehiculo vehiculo) {
-        return vehiculoService.guardar(vehiculo);
-    }
-
+    @ResponseStatus(HttpStatus.CREATED)
+    public VehiculoDTO crear(@Valid @RequestBody VehiculoDTO dto) { return service.crear(dto); }
     @PutMapping("/{id}")
-    public ResponseEntity<Vehiculo> actualizar(@PathVariable Integer id, @RequestBody Vehiculo vehiculo) {
-        return vehiculoService.obtenerPorId(id)
-                .map(existente -> {
-                    vehiculo.setIdVehiculo(id);
-                    return ResponseEntity.ok(vehiculoService.guardar(vehiculo));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public VehiculoDTO actualizar(@PathVariable Integer id, @Valid @RequestBody VehiculoDTO dto) {
+        return service.actualizar(id, dto);
     }
-
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        vehiculoService.eliminar(id);
-        return ResponseEntity.noContent().build();
-    }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void anular(@PathVariable Integer id) { service.anular(id); }
+    @PutMapping("/{id}/anular")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void anularPorPut(@PathVariable Integer id) { service.anular(id); }
+    @PutMapping("/{id}/activar")
+    public VehiculoDTO activar(@PathVariable Integer id) { return service.activar(id); }
 }

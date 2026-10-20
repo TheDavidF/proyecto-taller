@@ -2,25 +2,29 @@ package com.proyecto.taller.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class OrdenDto {
-
     private Integer idOrden;
+    @NotNull @Positive
     private Integer idVehiculo;
+    @NotNull @Positive
     private Integer idUsuario;
+    @NotNull
     private LocalDate fechaIngreso;
     private LocalDate fechaEntrega;
-    private BigDecimal total = BigDecimal.ZERO;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private BigDecimal total;
+    @NotBlank @Pattern(regexp = "PENDIENTE|EN_PROCESO|FINALIZADA|ENTREGADA", message = "debe ser PENDIENTE, EN_PROCESO, FINALIZADA o ENTREGADA")
     private String estadoOrden;
-    private Boolean estado = true;
-    private List<DetalleOrdenDto> detalles = new ArrayList<>();
+    private Boolean estado;
+    @NotEmpty
+    private List<@NotNull @Valid DetalleOrdenDto> detalles;
 }
