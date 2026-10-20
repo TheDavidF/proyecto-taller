@@ -1,58 +1,49 @@
 package com.proyecto.taller.service;
 
+import java.util.List;
 import com.proyecto.taller.dto.ServicioDTO;
 import com.proyecto.taller.entity.Servicio;
 import com.proyecto.taller.repository.ServicioRepository;
+import com.proyecto.taller.exception.ApiException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class ServicioService {
+    private final ServicioRepository repository;
+    public ServicioService(ServicioRepository repository) { this.repository = repository; }
 
-    private final ServicioRepository servicioRepository;
-
-    public ServicioService(ServicioRepository servicioRepository) {
-        this.servicioRepository = servicioRepository;
+    @Transactional(readOnly = true)
+    public List<ServicioDTO> listar(boolean incluirInactivos) {
+        return (incluirInactivos ? repository.findAll() : repository.findByEstadoTrue())
+                .stream().map(this::toDto).toList();
     }
-
-    public List<ServicioDTO> listarTodos() {
-        return servicioRepository.findAll().stream()
-                .map(this::convertirADto)
-                .collect(Collectors.toList());
+    public ServicioDTO obtenerPorId(Integer id) { return toDto(buscar(id)); }
+    public ServicioDTO crear(ServicioDTO dto) { return guardar(null, dto); }
+    public ServicioDTO actualizar(Integer id, ServicioDTO dto) { return guardar(id, dto); }
+    private ServicioDTO guardar(Integer id, ServicioDTO dto) {
+        Servicio entity = id == null ? new Servicio() : buscar(id);
+        entity.setNombre(dto.getNombre().trim());
+        entity.setPrecioBase(dto.getPrecioBase());
+        if (dto.getEstado() != null) entity.setEstado(dto.getEstado());
+        return toDto(repository.save(entity));
     }
-
-    public ServicioDTO obtenerPorId(Integer id) {
-        Servicio servicio = servicioRepository.findById(id).orElse(null);
-        return servicio != null ? convertirADto(servicio) : null;
+    public void anular(Integer id) { buscar(id).setEstado(false); }
+    public ServicioDTO activar(Integer id) {
+        Servicio entity = buscar(id);
+        entity.setEstado(true);
+        return toDto(entity);
     }
-
-    public ServicioDTO guardar(ServicioDTO dto) {
-        Servicio servicio = convertirAEntidad(dto);
-        Servicio guardado = servicioRepository.save(servicio);
-        return convertirADto(guardado);
+    private Servicio buscar(Integer id) {
+        return repository.findById(id).orElseThrow(() -> ApiException.noEncontrado("Servicio"));
     }
-
-    public void eliminar(Integer id) {
-        servicioRepository.deleteById(id);
-    }
-
-    private ServicioDTO convertirADto(Servicio servicio) {
+    private ServicioDTO toDto(Servicio entity) {
         ServicioDTO dto = new ServicioDTO();
-        dto.setIdServicio(servicio.getIdServicio());
-        dto.setNombre(servicio.getNombre());
-        dto.setPrecioBase(servicio.getPrecioBase());
-        dto.setEstado(servicio.getEstado());
+        dto.setIdServicio(entity.getIdServicio());
+        dto.setNombre(entity.getNombre());
+        dto.setPrecioBase(entity.getPrecioBase());
+        dto.setEstado(entity.getEstado());
         return dto;
-    }
-
-    private Servicio convertirAEntidad(ServicioDTO dto) {
-        Servicio servicio = new Servicio();
-        servicio.setIdServicio(dto.getIdServicio());
-        servicio.setNombre(dto.getNombre());
-        servicio.setPrecioBase(dto.getPrecioBase());
-        servicio.setEstado(dto.getEstado() != null ? dto.getEstado() : true);
-        return servicio;
     }
 }

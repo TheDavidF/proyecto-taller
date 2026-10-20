@@ -1,13 +1,11 @@
 package com.proyecto.taller.repository;
 
-
 import com.proyecto.taller.entity.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
 
-import java.util.Optional;
-
-@Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
-    Optional<Usuario> findByUsuario(String usuario);
+    List<Usuario> findByEstadoTrue();
+    java.util.Optional<Usuario> findByUsuario(String usuario);
+    boolean existsByUsuarioAndIdUsuarioNot(String usuario, Integer id);
 }

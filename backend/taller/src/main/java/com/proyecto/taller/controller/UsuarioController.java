@@ -1,50 +1,36 @@
 package com.proyecto.taller.controller;
 
-import com.proyecto.taller.entity.Usuario;
-import com.proyecto.taller.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import jakarta.validation.Valid;
+import com.proyecto.taller.dto.UsuarioDTO;
+import com.proyecto.taller.service.UsuarioService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
-
-    @Autowired
-    private UsuarioService usuarioService;
-
+    private final UsuarioService service;
+    public UsuarioController(UsuarioService service) { this.service = service; }
     @GetMapping
-    public List<Usuario> listar() {
-        return usuarioService.listarTodos();
+    public List<UsuarioDTO> listar(@RequestParam(defaultValue = "false") boolean incluirInactivos) {
+        return service.listar(incluirInactivos);
     }
-
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> obtenerPorId(@PathVariable Integer id) {
-        return usuarioService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    public UsuarioDTO obtener(@PathVariable Integer id) { return service.obtenerPorId(id); }
     @PostMapping
-    public Usuario crear(@RequestBody Usuario usuario) {
-        return usuarioService.guardar(usuario);
-    }
-
+    @ResponseStatus(HttpStatus.CREATED)
+    public UsuarioDTO crear(@Valid @RequestBody UsuarioDTO dto) { return service.crear(dto); }
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizar(@PathVariable Integer id, @RequestBody Usuario usuario) {
-        return usuarioService.obtenerPorId(id)
-                .map(existente -> {
-                    usuario.setIdUsuario(id);
-                    return ResponseEntity.ok(usuarioService.guardar(usuario));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public UsuarioDTO actualizar(@PathVariable Integer id, @Valid @RequestBody UsuarioDTO dto) {
+        return service.actualizar(id, dto);
     }
-
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        usuarioService.eliminar(id);
-        return ResponseEntity.noContent().build();
-    }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void anular(@PathVariable Integer id) { service.anular(id); }
+    @PutMapping("/{id}/anular")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void anularPorPut(@PathVariable Integer id) { service.anular(id); }
+    @PutMapping("/{id}/activar")
+    public UsuarioDTO activar(@PathVariable Integer id) { return service.activar(id); }
 }

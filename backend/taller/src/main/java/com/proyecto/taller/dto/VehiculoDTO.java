@@ -1,20 +1,22 @@
 package com.proyecto.taller.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import jakarta.validation.constraints.*;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class VehiculoDTO {
     private Integer idVehiculo;
+    @NotBlank @Size(max = 15)
     private String placa;
+    @NotBlank @Size(max = 40)
     private String marca;
+    @NotBlank @Size(max = 40)
     private String modelo;
+    @NotBlank @Size(max = 100)
     private String propietario;
+    @NotBlank @Size(max = 20)
     private String telefonoPropietario;
     private Boolean estado;
 }

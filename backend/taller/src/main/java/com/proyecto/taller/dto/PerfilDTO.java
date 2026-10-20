@@ -1,40 +1,14 @@
 package com.proyecto.taller.dto;
 
+import jakarta.validation.constraints.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class PerfilDTO {
     private Integer idPerfil;
+    @NotBlank @Size(max = 80)
     private String nombre;
     private Boolean estado;
-
-    public PerfilDTO() {
-    }
-
-    public PerfilDTO(Integer idPerfil, String nombre, Boolean estado) {
-        this.idPerfil = idPerfil;
-        this.nombre = nombre;
-        this.estado = estado;
-    }
-
-    public Integer getIdPerfil() {
-        return idPerfil;
-    }
-
-    public void setIdPerfil(Integer idPerfil) {
-        this.idPerfil = idPerfil;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public Boolean getEstado() {
-        return estado;
-    }
-
-    public void setEstado(Boolean estado) {
-        this.estado = estado;
-    }
 }
