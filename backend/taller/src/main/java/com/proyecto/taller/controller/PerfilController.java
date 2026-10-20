@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/perfiles")
+@CrossOrigin(origins = "http://localhost:5173")
 public class PerfilController {
 
     @Autowired

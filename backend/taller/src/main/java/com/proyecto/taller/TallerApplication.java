@@ -1,4 +1,4 @@
-package com.proyecto.taller;
+	package com.proyecto.taller;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
