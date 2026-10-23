@@ -1,9 +1,5 @@
 export type EstadoOrden =
-  | "PENDIENTE"
-  | "EN_PROCESO"
-  | "FINALIZADA"
-  | "ENTREGADA";
-
+  "PENDIENTE" | "EN_PROCESO" | "FINALIZADA" | "ENTREGADA";
 export interface DetalleOrdenFormulario {
   idDetalleOrden?: number;
   idServicio: number;
@@ -11,7 +7,6 @@ export interface DetalleOrdenFormulario {
   observaciones: string;
   estado: boolean;
 }
-
 export interface OrdenFormulario {
   idVehiculo: number;
   idUsuario: number;
@@ -20,20 +15,13 @@ export interface OrdenFormulario {
   estadoOrden: EstadoOrden;
   detalles: DetalleOrdenFormulario[];
 }
-
 export interface DetalleOrden extends DetalleOrdenFormulario {
   idDetalleOrden: number;
   idOrden: number;
 }
-
-export interface Orden {
+export interface Orden extends OrdenFormulario {
   idOrden: number;
-  idVehiculo: number;
-  idUsuario: number;
-  fechaIngreso: string;
-  fechaEntrega: string | null;
   total: number;
-  estadoOrden: EstadoOrden;
   estado: boolean;
   detalles: DetalleOrden[];
 }

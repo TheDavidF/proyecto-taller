@@ -1,23 +1,3 @@
-export interface VehiculoOrden {
-  idVehiculo: number;
-  placa: string;
-  marca: string;
-  modelo: string;
-  propietario: string;
-  estado: boolean;
-}
-
-export interface UsuarioOrden {
-  idUsuario: number;
-  idPerfil: number;
-  nombre: string;
-  usuario: string;
-  estado: boolean;
-}
-
-export interface ServicioOrden {
-  idServicio: number;
-  nombre: string;
-  precioBase: number;
-  estado: boolean;
-}
+export type { Vehiculo as VehiculoOrden } from "./vehiculo";
+export type { Usuario as UsuarioOrden } from "./usuario";
+export type { Servicio as ServicioOrden } from "./servicio";
