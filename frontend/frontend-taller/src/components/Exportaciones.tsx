@@ -19,15 +19,9 @@ export default function Exportaciones({
     },
     [vista],
   );
-  useEffect(() => {
-    if (!vista) return;
-    const cerrar = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setVista(null);
-    };
-    window.addEventListener("keydown", cerrar);
-    return () => window.removeEventListener("keydown", cerrar);
-  }, [vista]);
   async function exportar(tipo: "pdf" | "vista" | "xlsx") {
+    const ventana = tipo === "vista" ? window.open("", "_blank") : null;
+    if (ventana) ventana.opener = null;
     setOcupado(true);
     setError("");
     try {
@@ -37,10 +31,16 @@ export default function Exportaciones({
         descargar(await generarExcel(tabla), `${tabla.archivo}-${hoy()}.xlsx`);
       else {
         const pdf = generarPDF(tabla);
-        if (tipo === "vista") setVista(URL.createObjectURL(pdf.output("blob")));
+        if (tipo === "vista") {
+          if (!ventana) throw new Error("Permite abrir ventanas para ver el documento.");
+          const url = URL.createObjectURL(pdf.output("blob"));
+          setVista(url);
+          ventana.location.replace(url);
+        }
         else descargar(pdf.output("blob"), `${tabla.archivo}-${hoy()}.pdf`);
       }
     } catch (e) {
+      ventana?.close();
       setError(mensajeError(e));
     } finally {
       setOcupado(false);
@@ -49,62 +49,26 @@ export default function Exportaciones({
   const disabled = deshabilitado || ocupado || tabla.filas.length === 0;
   return (
     <div className="no-print mb-4 space-y-3">
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          className={boton}
-          disabled={disabled}
-          onClick={() => void exportar("pdf")}
-        >
-          Descargar PDF
-        </button>
-        <button
-          type="button"
-          className={secundario}
-          disabled={disabled}
-          onClick={() => void exportar("vista")}
-        >
-          Vista previa PDF
-        </button>
-        <button
-          type="button"
-          className={secundario}
-          disabled={disabled}
-          onClick={() => void exportar("xlsx")}
-        >
-          Descargar Excel XLSX
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <details className="relative">
+          <summary className={`${boton} cursor-pointer list-none`}>Exportar</summary>
+          <div className="absolute left-0 z-20 mt-2 flex min-w-48 flex-col gap-2 rounded-lg border border-cafe/10 bg-white p-2 shadow-lg">
+            {([
+              ["vista", "Vista previa"],
+              ["pdf", "Descargar documento"],
+              ["xlsx", "Exportar a Excel"],
+            ] as const).map(([tipo, texto]) => (
+              <button key={tipo} type="button" className={secundario}
+                disabled={disabled} onClick={(event) => {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                  void exportar(tipo);
+                }}>{texto}</button>
+            ))}
+          </div>
+        </details>
         {ocupado && <span role="status">Preparando documento...</span>}
       </div>
       {error && <p role="alert">{error}</p>}
-      {vista && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Vista previa PDF"
-          className="fixed inset-0 z-50 flex flex-col gap-3 bg-crema p-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-bold text-azul">Vista previa PDF</h2>
-            <button
-              autoFocus
-              type="button"
-              className={secundario}
-              onClick={() => setVista(null)}
-            >
-              Cerrar vista previa
-            </button>
-          </div>
-          <p className="text-sm">
-            Si tu navegador no muestra el documento, utiliza Descargar PDF.
-          </p>
-          <iframe
-            title="Documento PDF"
-            src={vista}
-            className="min-h-0 w-full flex-1 border border-cafe/20 bg-white"
-          />
-        </div>
-      )}
     </div>
   );
 }
