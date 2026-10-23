@@ -19,6 +19,8 @@ public class SeguridadConfig {
     @Bean
     SecurityFilterChain seguridad(HttpSecurity http, AccesoService acceso) throws Exception {
         http.cors(cors -> {}).authorizeHttpRequests(reglas -> reglas
+            .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.ico", "/vite.svg",
+                "/perfiles", "/usuarios", "/vehiculos", "/servicios", "/ordenes", "/reportes", "/api/health").permitAll()
             .requestMatchers("/api/auth/csrf", "/api/auth/login", "/error").permitAll()
             .requestMatchers("/api/auth/**").authenticated()
             .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**", "/api/perfiles", "/api/perfiles/**").hasAnyRole("ADMIN", "EMPLEADO")

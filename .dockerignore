@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/target
+**/dist
+**/.env
+**/.env.*
+**/*.pem
+**/*.p12
+**/*.jks
+**/*.sql
+**/src/test
