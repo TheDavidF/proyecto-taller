@@ -1,3 +1,10 @@
+import Exportaciones from "../components/Exportaciones";
+import TablaReporte from "../components/TablaReporte";
+import type { TablaExportacion } from "../utils/exportaciones";
+import { listarServicios } from "../services/servicioServices";
+import { listarPerfiles } from "../services/perfilServices";
+import type { Servicio } from "../types/servicio";
+import type { Perfil } from "../types/perfil";
 import { useEffect, useState } from "react";
 import { Panel, Avisos, Etiqueta } from "../components/Controles";
 import { campo, boton, secundario } from "../components/estilos";
@@ -7,8 +14,12 @@ import { listarUsuarios } from "../services/usuarioServices";
 import type { Orden } from "../types/orden";
 import type { Vehiculo } from "../types/vehiculo";
 import type { Usuario } from "../types/usuario";
-import { moneda, fecha, hoy, mensajeError } from "../utils/formato";
+import { moneda, fecha, hoy, mensajeError, normalizar } from "../utils/formato";
 export default function Reportes() {
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [perfiles, setPerfiles] = useState<Perfil[]>([]);
+  const [busquedaUsuarios, setBusquedaUsuarios] = useState("");
+  const [usuariosInactivos, setUsuariosInactivos] = useState(false);
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -25,12 +36,16 @@ export default function Reportes() {
       listarOrdenes(true),
       listarVehiculos(true),
       listarUsuarios(true),
+      listarServicios(true),
+      listarPerfiles(true),
     ])
-      .then(([o, v, u]) => {
+      .then(([o, v, u, s, p]) => {
         if (vigente) {
           setOrdenes(o.data);
           setVehiculos(v.data);
           setUsuarios(u.data);
+          setServicios(s.data);
+          setPerfiles(p.data);
           setError("");
         }
       })
@@ -62,6 +77,110 @@ export default function Reportes() {
     filas
       .filter((o) => o.estado)
       .reduce((s, o) => s + Math.round(o.total * 100), 0) / 100;
+  const filtros = `Ingreso: ${desde ? fecha(desde) : "Sin límite inicial"} a ${hasta ? fecha(hasta) : "Sin límite final"} · Trabajo: ${estado.replaceAll("_", " ") || "Todos"} · ${todos ? "Activas y anuladas" : "Solo activas"}`;
+  const resumen = `${filas.length} órdenes · Total de órdenes activas: ${moneda(total)}. Las anuladas no suman en este total.`;
+  const tablaOrdenes: TablaExportacion = {
+    titulo: "Reporte de órdenes",
+    archivo: "reporte-ordenes",
+    filtros,
+    resumen,
+    columnas: [
+      "Orden",
+      "Placa",
+      "Propietario",
+      "Responsable",
+      "Ingreso",
+      "Entrega",
+      "Trabajo",
+      "Registro",
+      "Total Q",
+    ].map((titulo) => ({ titulo, moneda: titulo === "Total Q" })),
+    filas: filas.map((o) => [
+      o.idOrden,
+      vehiculo(o.idVehiculo),
+      vehiculos.find((v) => v.idVehiculo === o.idVehiculo)?.propietario ??
+        "Sin referencia",
+      usuario(o.idUsuario),
+      fecha(o.fechaIngreso),
+      fecha(o.fechaEntrega),
+      o.estadoOrden.replaceAll("_", " "),
+      o.estado ? "Activa" : "Anulada",
+      o.total,
+    ]),
+  };
+  const tablaDetalles: TablaExportacion = {
+    titulo: "Órdenes con servicios",
+    archivo: "ordenes-servicios",
+    filtros,
+    resumen: `${resumen} El total de cada orden aparece solo en su primera fila; los detalles inactivos no suman.`,
+    columnas: [
+      "Orden",
+      "Placa",
+      "Responsable",
+      "Ingreso",
+      "Trabajo",
+      "Registro",
+      "Servicio",
+      "Precio aplicado Q",
+      "Observaciones",
+      "Detalle",
+      "Total orden Q",
+    ].map((titulo) => ({ titulo, moneda: titulo.endsWith(" Q") })),
+    filas: filas.flatMap((o) => {
+      const cabecera = [
+        o.idOrden,
+        vehiculo(o.idVehiculo),
+        usuario(o.idUsuario),
+        fecha(o.fechaIngreso),
+        o.estadoOrden.replaceAll("_", " "),
+        o.estado ? "Activa" : "Anulada",
+      ];
+      if (!o.detalles.length)
+        return [[...cabecera, "Sin detalles", null, "", "", o.total]];
+      return o.detalles.map((d, i) => [
+        ...cabecera,
+        servicios.find((s) => s.idServicio === d.idServicio)?.nombre ??
+          `Servicio #${d.idServicio}`,
+        d.precioAplicado,
+        d.observaciones ?? "",
+        d.estado ? "Activo" : "Inactivo (no suma)",
+        i === 0 ? o.total : null,
+      ]);
+    }),
+  };
+  const usuariosFiltrados = usuarios.filter(
+    (u) =>
+      (usuariosInactivos || u.estado) &&
+      normalizar(
+        `${u.nombre} ${u.usuario} ${u.correo} ${perfiles.find((p) => p.idPerfil === u.idPerfil)?.nombre ?? ""}`,
+      ).includes(normalizar(busquedaUsuarios.trim())),
+  );
+  const tablaUsuarios: TablaExportacion = {
+    titulo: "Usuarios y perfiles",
+    archivo: "usuarios-perfiles",
+    filtros: `Búsqueda: ${busquedaUsuarios.trim() || "Todas"} · ${usuariosInactivos ? "Usuarios activos e inactivos" : "Solo usuarios activos"}. Se muestra el estado actual del perfil, incluso si está inactivo.`,
+    columnas: [
+      "Usuario ID",
+      "Nombre",
+      "Usuario",
+      "Correo",
+      "Estado usuario",
+      "Perfil",
+      "Estado perfil",
+    ].map((titulo) => ({ titulo })),
+    filas: usuariosFiltrados.map((u) => {
+      const perfil = perfiles.find((p) => p.idPerfil === u.idPerfil);
+      return [
+        u.idUsuario,
+        u.nombre,
+        u.usuario,
+        u.correo,
+        u.estado ? "Activo" : "Inactivo",
+        perfil?.nombre ?? `Perfil #${u.idPerfil}`,
+        perfil ? (perfil.estado ? "Activo" : "Inactivo") : "Sin referencia",
+      ];
+    }),
+  };
   function exportar() {
     const celda = (v: unknown) => {
       let s = String(v ?? "");
@@ -180,6 +299,10 @@ export default function Reportes() {
             </p>
           </div>
         </div>
+        <Exportaciones
+          tabla={tablaOrdenes}
+          deshabilitado={cargando || Boolean(error) || fechasInvalidas}
+        />
         <div className="no-print mb-5 flex flex-wrap gap-3">
           <button
             className={boton}
@@ -231,6 +354,7 @@ export default function Reportes() {
                 <tr>
                   <th>Orden</th>
                   <th>Placa</th>
+                  <th>Propietario</th>
                   <th>Responsable</th>
                   <th>Ingreso</th>
                   <th>Entrega</th>
@@ -244,6 +368,10 @@ export default function Reportes() {
                   <tr key={o.idOrden}>
                     <td>#{o.idOrden}</td>
                     <td>{vehiculo(o.idVehiculo)}</td>
+                    <td>
+                      {vehiculos.find((v) => v.idVehiculo === o.idVehiculo)
+                        ?.propietario ?? "Sin referencia"}
+                    </td>
                     <td>{usuario(o.idUsuario)}</td>
                     <td>{fecha(o.fechaIngreso)}</td>
                     <td>{fecha(o.fechaEntrega)}</td>
@@ -255,6 +383,54 @@ export default function Reportes() {
               </tbody>
             </table>
           </div>
+        )}
+      </Panel>
+      <Panel titulo="Órdenes con servicios">
+        <p className="mb-4 text-sm">{filtros}</p>
+        <p className="mb-4 text-sm">{tablaDetalles.resumen}</p>
+        <Exportaciones
+          tabla={tablaDetalles}
+          deshabilitado={cargando || Boolean(error) || fechasInvalidas}
+        />
+        {cargando ? (
+          <p>Cargando...</p>
+        ) : error ? (
+          <p>No fue posible cargar los datos.</p>
+        ) : (
+          <TablaReporte tabla={tablaDetalles} />
+        )}
+      </Panel>
+      <Panel titulo="Usuarios y perfiles">
+        <div className="no-print mb-4 flex flex-wrap items-end gap-4">
+          <Etiqueta id="buscarUsuarioReporte" titulo="Buscar usuario o perfil">
+            <input
+              id="buscarUsuarioReporte"
+              type="search"
+              className={campo}
+              value={busquedaUsuarios}
+              onChange={(e) => setBusquedaUsuarios(e.target.value)}
+            />
+          </Etiqueta>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={usuariosInactivos}
+              onChange={(e) => setUsuariosInactivos(e.target.checked)}
+            />{" "}
+            Incluir usuarios inactivos
+          </label>
+        </div>
+        <p className="mb-4 text-sm">{tablaUsuarios.filtros}</p>
+        <Exportaciones
+          tabla={tablaUsuarios}
+          deshabilitado={cargando || Boolean(error)}
+        />
+        {cargando ? (
+          <p>Cargando...</p>
+        ) : error ? (
+          <p>No fue posible cargar los datos.</p>
+        ) : (
+          <TablaReporte tabla={tablaUsuarios} />
         )}
       </Panel>
     </div>

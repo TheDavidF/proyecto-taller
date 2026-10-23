@@ -1,3 +1,4 @@
+import Exportaciones from "../components/Exportaciones";
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { Panel, Avisos, Etiqueta, Estado } from "../components/Controles";
@@ -282,6 +283,37 @@ export default function Usuarios() {
             Actualizar listado
           </button>
         </div>
+        <Exportaciones
+          deshabilitado={
+            c.cargando ||
+            c.errorCarga ||
+            c.ocupado ||
+            cargandoPerfiles ||
+            Boolean(errorPerfiles)
+          }
+          tabla={{
+            titulo: "Listado de usuarios",
+            archivo: "usuarios",
+            filtros: `Búsqueda: ${busqueda.trim() || "Todas"} · ${todos ? "Activos e inactivos" : "Solo activos"}`,
+            columnas: [
+              { titulo: "ID" },
+              { titulo: "Nombre" },
+              { titulo: "Usuario" },
+              { titulo: "Correo" },
+              { titulo: "Perfil" },
+              { titulo: "Estado" },
+            ],
+            filas: filas.map((f) => [
+              f.idUsuario,
+              f.nombre,
+              f.usuario,
+              f.correo,
+              perfiles.find((p) => p.idPerfil === f.idPerfil)?.nombre ??
+                `Perfil #${f.idPerfil}`,
+              f.estado ? "Activo" : "Inactivo",
+            ]),
+          }}
+        />
         {c.cargando ? (
           <p>Cargando...</p>
         ) : c.errorCarga ? (

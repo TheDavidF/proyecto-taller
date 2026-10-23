@@ -49,6 +49,20 @@ tbody tr:nth-child(even) {
   background: #f5ebdd60;
 }
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  th,
+  td {
+    padding: 4px;
+    overflow-wrap: anywhere;
+    white-space: normal !important;
+  }
+
   .no-print,
   header,
   nav,
@@ -69,6 +83,8 @@ tbody tr:nth-child(even) {
   }
   table {
     width: 100%;
+    table-layout: fixed;
+    font-size: 8pt;
   }
   tr {
     break-inside: avoid;

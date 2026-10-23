@@ -1,3 +1,4 @@
+import Exportaciones from "../components/Exportaciones";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Panel, Avisos, Etiqueta, Estado } from "../components/Controles";
@@ -599,6 +600,34 @@ export default function Ordenes() {
             Actualizar datos
           </button>
         </div>
+        <Exportaciones
+          deshabilitado={cargando || errorCarga || ocupado}
+          tabla={{
+            titulo: "Listado de Órdenes",
+            archivo: "ordenes",
+            filtros: `Búsqueda: ${busqueda.trim() || "Todas"} · Trabajo: ${filtroEstado.replaceAll("_", " ") || "Todos"} · ${todos ? "Activas y anuladas" : "Solo activas"}`,
+            columnas: [
+              { titulo: "Orden" },
+              { titulo: "Vehículo" },
+              { titulo: "Responsable" },
+              { titulo: "Ingreso" },
+              { titulo: "Entrega" },
+              { titulo: "Trabajo" },
+              { titulo: "Registro" },
+              { titulo: "Total Q", moneda: true },
+            ],
+            filas: filas.map((f) => [
+              f.idOrden,
+              vehiculoTexto(f.idVehiculo),
+              usuarioTexto(f.idUsuario),
+              fecha(f.fechaIngreso),
+              fecha(f.fechaEntrega),
+              f.estadoOrden.replaceAll("_", " "),
+              f.estado ? "Activa" : "Anulada",
+              f.total,
+            ]),
+          }}
+        />
         {cargando ? (
           <p>Cargando...</p>
         ) : errorCarga ? (
