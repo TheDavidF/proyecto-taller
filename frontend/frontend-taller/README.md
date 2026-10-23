@@ -33,6 +33,7 @@ npm run dev
 
 ## Módulos incluidos
 
+- Login, persistencia de sesión al recargar, cierre de sesión y acceso por perfil.
 - Inicio y navegación adaptable a pantallas pequeñas.
 - Perfiles: listar, buscar, crear, editar, anular y reactivar.
 - Usuarios: selección de perfil activo, crear, editar sin cambiar contraseña si se deja vacía, anular y reactivar.
@@ -68,11 +69,11 @@ Los datos se guardan en tu MySQL a través de la API. No se usan registros simul
 ## Particularidades de órdenes
 
 - Cada fila de servicio permite cambiar precio y observaciones directamente.
-- "Incluir en el total" corresponde al campo `estado` del detalle. Los detalles desmarcados se guardan como inactivos y no suman.
+- "Servicio activo" corresponde al campo `estado` del detalle. Los detalles desmarcados se guardan como inactivos y no suman.
 - Se exige al menos un detalle activo.
 - El servidor vuelve a calcular el total; el frontend no envía el total como autoridad.
 - Al editar se conservan los IDs de los detalles existentes.
-- Quitar un detalle de una orden y guardar lo elimina de esa orden. Anular la orden conserva todo su historial.
+- Anular un servicio ya guardado conserva su detalle con `estado=false`; se puede reactivar con "Servicio activo". Quitar un servicio nuevo lo retira del formulario. Anular la orden conserva todo su historial.
 - Un vehículo, usuario/perfil o servicio inactivo no puede usarse al guardar una orden. El formulario muestra la referencia histórica y permite sustituirla por una activa.
 - El estado de trabajo admite PENDIENTE, EN_PROCESO, FINALIZADA y ENTREGADA. La anulación es un estado independiente y no cambia el trabajo.
 
@@ -113,8 +114,8 @@ Para revisar manualmente las exportaciones en una base de práctica: filtrar un 
 
 ## Alcance
 
-Este frontend corresponde al backend preparado en esta conversación: rutas `/api/perfiles`, `/api/usuarios`, `/api/vehiculos`, `/api/servicios`, `/api/ordenes`, parámetro `incluirInactivos` y operaciones `/anular` y `/activar`.
+Este frontend utiliza el backend del taller: rutas `/api/perfiles`, `/api/usuarios`, `/api/vehiculos`, `/api/servicios`, `/api/ordenes`, parámetro `incluirInactivos` y operaciones `/anular` y `/activar`.
 
-No implementa autenticación, sesiones ni autorización: el backend actual tampoco tiene endpoints de login. Perfiles es un catálogo de asignación de usuarios, no un sistema de permisos. No se agregaron pantallas de login que aparenten proteger la API.
+El acceso requiere login. Administrador administra todos los módulos; Empleado opera vehículos, servicios, órdenes y reportes. Usuarios y Perfiles se restringen en navegación y rutas, y el backend bloquea sus escrituras para empleados. La sesión usa cookie HttpOnly, con credenciales CORS y protección CSRF. No se almacenan contraseñas ni tokens en localStorage. El administrador inicial se configura siguiendo `backend/taller/README.md`.
 
 No subir `.env`, `node_modules` ni `dist`. El archivo `.env.example` sí se puede compartir. Conserva `package-lock.json` para instalar las mismas versiones.

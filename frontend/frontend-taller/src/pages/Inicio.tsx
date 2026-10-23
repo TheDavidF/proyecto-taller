@@ -33,7 +33,7 @@ const modulos = [
     ruta: "/reportes",
   },
 ];
-export default function Inicio() {
+export default function Inicio({ administrador }: { administrador: boolean }) {
   return (
     <div className="space-y-6">
       <Panel titulo="Administración del taller">
@@ -45,7 +45,7 @@ export default function Inicio() {
         </div>
       </Panel>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modulos.map((m) => (
+        {modulos.filter((m) => administrador || !["/perfiles", "/usuarios"].includes(m.ruta)).map((m) => (
           <Link
             key={m.ruta}
             to={m.ruta}

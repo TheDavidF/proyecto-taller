@@ -64,7 +64,8 @@ public class OrdenServicioService {
             }
             Servicio servicio = servicios.findById(d.getIdServicio())
                     .orElseThrow(() -> ApiException.noEncontrado("Servicio"));
-            if (!Boolean.TRUE.equals(servicio.getEstado()))
+            if (!Boolean.TRUE.equals(servicio.getEstado())
+                    && !(d.getIdDetalleOrden() != null && Boolean.FALSE.equals(d.getEstado())))
                 throw ApiException.conflicto("El servicio está inactivo");
             detalle.setOrdenServicio(orden); detalle.setServicio(servicio);
             detalle.setPrecioAplicado(d.getPrecioAplicado()); detalle.setObservaciones(d.getObservaciones());
@@ -76,7 +77,9 @@ public class OrdenServicioService {
             throw ApiException.invalido("La orden necesita al menos un detalle activo");
         if (total.compareTo(new BigDecimal("99999999.99")) > 0)
             throw ApiException.invalido("El total supera el límite permitido");
-        orden.getDetalles().removeIf(d -> !resultado.contains(d));
+        for (DetalleOrden d : orden.getDetalles()) {
+            if (!resultado.contains(d)) d.setEstado(false);
+        }
         for (DetalleOrden d : resultado) if (!orden.getDetalles().contains(d)) orden.getDetalles().add(d);
         orden.setTotal(total);
         return toDto(repository.saveAndFlush(orden));

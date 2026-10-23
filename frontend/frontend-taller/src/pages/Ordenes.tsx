@@ -175,7 +175,7 @@ export default function Ordenes() {
     if (
       form.detalles.some(
         (d) =>
-          !servicios.some((s) => s.idServicio === d.idServicio && s.estado) ||
+          !servicios.some((s) => s.idServicio === d.idServicio && (s.estado || (!d.estado && Boolean(d.idDetalleOrden)))) ||
           !Number.isFinite(Number(d.precioAplicado)) ||
           Number(d.precioAplicado) < 0 ||
           !/^\d+(\.\d{1,2})?$/.test(String(d.precioAplicado)) ||
@@ -505,7 +505,7 @@ export default function Ordenes() {
                         }));
                       }}
                     />{" "}
-                    Incluir en el total
+                    Servicio activo
                   </label>
                   <button
                     type="button"
@@ -513,11 +513,13 @@ export default function Ordenes() {
                     onClick={() =>
                       setForm((prev) => ({
                         ...prev,
-                        detalles: prev.detalles.filter((_, j) => j !== i),
+                        detalles: d.idDetalleOrden
+                          ? prev.detalles.map((item, j) => j === i ? { ...item, estado: false } : item)
+                          : prev.detalles.filter((_, j) => j !== i),
                       }))
                     }
                   >
-                    Quitar
+                    {d.idDetalleOrden ? "Anular servicio" : "Quitar"}
                   </button>
                 </div>
               </div>

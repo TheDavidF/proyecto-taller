@@ -22,17 +22,35 @@ class ApiIntegrationTests {
     @Autowired PerfilRepository perfiles;
     @Autowired VehiculoRepository vehiculos;
     @Autowired ServicioRepository servicios;
-    final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    HttpClient client;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder encoder;
     final ObjectMapper mapper = new ObjectMapper();
 
-    @BeforeEach void limpiar() {
+    @BeforeEach void limpiar() throws Exception {
         detalles.deleteAll(); ordenes.deleteAll(); usuarios.deleteAll();
         perfiles.deleteAll(); vehiculos.deleteAll(); servicios.deleteAll();
+        cuenta("prueba-admin", "Admin");
+        client = nuevoCliente();
+        ok("POST", "/auth/login", "usuario=prueba-admin&contrasena=Clave1234", 204);
+    }
+    HttpClient nuevoCliente() {
+        return HttpClient.newBuilder().cookieHandler(new java.net.CookieManager(null, java.net.CookiePolicy.ACCEPT_ALL))
+            .connectTimeout(Duration.ofSeconds(10)).build();
+    }
+    int cuenta(String nombre, String rol) {
+        var perfil = new com.proyecto.taller.entity.Perfil(); perfil.setNombre(rol); perfiles.save(perfil);
+        var usuario = new com.proyecto.taller.entity.Usuario(); usuario.setNombre(nombre); usuario.setUsuario(nombre);
+        usuario.setPerfil(perfil); usuario.setCorreo(nombre + "@example.com"); usuario.setContrasena(encoder.encode("Clave1234"));
+        return usuarios.save(usuario).getIdUsuario();
     }
     HttpResponse<String> request(String method, String path, String body) throws Exception {
-        return client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api" + path))
-            .timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
-            .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body))
+        var builder = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api" + path))
+            .timeout(Duration.ofSeconds(20)).header("Content-Type", path.equals("/auth/login") ? "application/x-www-form-urlencoded" : "application/json");
+        if (!method.equals("GET")) {
+            var csrf = mapper.readTree(request("GET", "/auth/csrf", null).body());
+            builder.header(csrf.get("headerName").asText(), csrf.get("token").asText());
+        }
+        return client.send(builder.method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body))
             .build(), HttpResponse.BodyHandlers.ofString());
     }
     JsonNode ok(String method, String path, String body, int status) throws Exception {
@@ -63,10 +81,10 @@ class ApiIntegrationTests {
         ok("PUT", "/perfiles/" + p, "{\"nombre\":\"Mecánico\"}", 200);
         assertEquals("Mecánico", ok("GET", "/perfiles/" + p, null, 200).get("nombre").asText());
         ok("DELETE", "/perfiles/" + p, null, 204);
-        assertEquals(0, ok("GET", "/perfiles", null, 200).size());
-        assertEquals(1, ok("GET", "/perfiles?incluirInactivos=true", null, 200).size());
-        ok("PUT", "/perfiles/" + p + "/activar", null, 200);
         assertEquals(1, ok("GET", "/perfiles", null, 200).size());
+        assertEquals(2, ok("GET", "/perfiles?incluirInactivos=true", null, 200).size());
+        ok("PUT", "/perfiles/" + p + "/activar", null, 200);
+        assertEquals(2, ok("GET", "/perfiles", null, 200).size());
         ok("GET", "/perfiles/999999", null, 404);
         assertTrue(ok("POST", "/servicios", "{\"nombre\":\"\",\"precioBase\":-1}", 400).get("errores").has("precioBase"));
         ok("POST", "/servicios", "{", 400);
@@ -100,10 +118,12 @@ class ApiIntegrationTests {
         String edit = "{\"idDetalleOrden\":" + d + ",\"idServicio\":" + s + ",\"precioAplicado\":60}";
         JsonNode updated = ok("PUT", "/ordenes/" + id, orden(v, u, edit), 200);
         assertEquals(d, updated.get("detalles").get(0).get("idDetalleOrden").asInt());
-        assertEquals(1, detalles.count());
+        assertEquals(2, detalles.count());
+        assertEquals(1, detalles.findAll().stream().filter(x -> Boolean.TRUE.equals(x.getEstado())).count());
         assertEquals(0, new BigDecimal("60").compareTo(updated.get("total").decimalValue()));
         ok("PUT", "/ordenes/" + id, orden(v, u, detalle(s, "5") + "," + detalle(999999, "1")), 404);
-        assertEquals(1, detalles.count());
+        assertEquals(2, detalles.count());
+        assertEquals(1, detalles.findAll().stream().filter(x -> Boolean.TRUE.equals(x.getEstado())).count());
         assertEquals(0, new BigDecimal("60").compareTo(ok("GET", "/ordenes/" + id, null, 200).get("total").decimalValue()));
         ok("PUT", "/ordenes/" + id, orden(v, u, edit + "," + edit), 400);
         ok("PUT", "/ordenes/" + id, orden(v, u, edit.replace("60", "-1")), 400);
@@ -124,6 +144,25 @@ class ApiIntegrationTests {
         ok("DELETE", "/servicios/" + s, null, 204);
         ok("POST", "/ordenes", orden(v, u, detalle(s, "2")), 409);
     }
+    @Test void detalleOmitidoSeConservaYPuedeReactivarse() throws Exception {
+        int u = usuario(perfil()), v = vehiculo(), s = servicio("Aceite"), s2 = servicio("Frenos");
+        var original = ok("POST", "/ordenes", orden(v, u, detalle(s, "50") + "," + detalle(s2, "20")), 201);
+        int id = original.get("idOrden").asInt();
+        int d1 = original.get("detalles").get(0).get("idDetalleOrden").asInt();
+        int d2 = original.get("detalles").get(1).get("idDetalleOrden").asInt();
+        String primero = "{\"idDetalleOrden\":" + d1 + ",\"idServicio\":" + s + ",\"precioAplicado\":50}";
+        var editada = ok("PUT", "/ordenes/" + id, orden(v, u, primero), 200);
+        assertEquals(2, editada.get("detalles").size());
+        assertFalse(detalles.findById(d2).orElseThrow().getEstado());
+        assertEquals(0, new BigDecimal("50").compareTo(editada.get("total").decimalValue()));
+        String segundo = "{\"idDetalleOrden\":" + d2 + ",\"idServicio\":" + s2 + ",\"precioAplicado\":20,\"estado\":true}";
+        var reactivada = ok("PUT", "/ordenes/" + id, orden(v, u, primero + "," + segundo), 200);
+        assertTrue(detalles.findById(d2).orElseThrow().getEstado());
+        assertEquals(2, detalles.count());
+        assertEquals(0, new BigDecimal("70").compareTo(reactivada.get("total").decimalValue()));
+        ok("DELETE", "/servicios/" + s2, null, 204);
+        ok("PUT", "/ordenes/" + id, orden(v, u, primero + "," + segundo.replace("true", "false")), 200);
+    }
     @Test void vehiculoActualizaYRechazaDuplicados() throws Exception {
         int id = vehiculo();
         String body = "{\"placa\":\"P123ABC\",\"marca\":\"Scion\",\"modelo\":\"2010\",\"propietario\":\"Fernando\",\"telefonoPropietario\":\"55555555\"}";
@@ -131,6 +170,34 @@ class ApiIntegrationTests {
         ok("POST", "/vehiculos", body, 409);
         ok("DELETE", "/vehiculos/" + id, null, 204);
         ok("PUT", "/vehiculos/" + id + "/activar", null, 200);
+    }
+    @Test void loginPermisosLogoutYRevocacion() throws Exception {
+        int empleado = cuenta("empleado", "Empleado");
+        client = nuevoCliente();
+        ok("GET", "/ordenes", null, 401);
+        var sinCsrf = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/auth/login"))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString("usuario=empleado&contrasena=Clave1234")).build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(403, sinCsrf.statusCode());
+        ok("POST", "/auth/login", "usuario=empleado&contrasena=incorrecta", 401);
+        ok("POST", "/auth/login", "usuario=empleado&contrasena=Clave1234", 204);
+        var sesion = ok("GET", "/auth/me", null, 200);
+        assertEquals("EMPLEADO", sesion.get("rol").asText());
+        assertFalse(sesion.toString().contains("contrasena"));
+        ok("GET", "/ordenes", null, 200);
+        ok("POST", "/perfiles", "{\"nombre\":\"Otro\"}", 403);
+        ok("PUT", "/usuarios/" + empleado + "/anular", null, 403);
+        vehiculo(); servicio("Servicio de empleado");
+        ok("POST", "/auth/logout", null, 204);
+        ok("GET", "/ordenes", null, 401);
+        ok("POST", "/auth/login", "usuario=empleado&contrasena=Clave1234", 204);
+        var u = usuarios.findById(empleado).orElseThrow(); u.setEstado(false); usuarios.save(u);
+        ok("GET", "/ordenes", null, 401);
+        ok("POST", "/auth/login", "usuario=empleado&contrasena=Clave1234", 401);
+        u.setEstado(true); usuarios.save(u);
+        ok("POST", "/auth/login", "usuario=empleado&contrasena=Clave1234", 204);
+        var perfil = perfiles.findById(u.getPerfil().getIdPerfil()).orElseThrow(); perfil.setEstado(false); perfiles.save(perfil);
+        ok("GET", "/ordenes", null, 401);
     }
     @Test void corsPermiteOrigenDelFrontend() throws Exception {
         var response = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/servicios"))
