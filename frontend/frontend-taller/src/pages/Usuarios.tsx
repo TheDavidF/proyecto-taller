@@ -139,7 +139,7 @@ export default function Usuarios() {
           !errorPerfiles &&
           !perfiles.some((p) => p.estado) && (
             <p className="mb-4 rounded-lg bg-crema p-3">
-              Primero registra un perfil activo en el módulo Perfiles.
+              No hay perfiles activos disponibles.
             </p>
           )}
         <form onSubmit={guardar}>
