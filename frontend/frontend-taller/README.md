@@ -43,15 +43,15 @@ npm run dev
 
 ## Exportaciones
 
-Los cinco listados (Perfiles, Usuarios, Vehículos, Servicios y Órdenes) y los tres reportes permiten **Descargar PDF**, **Vista previa PDF** y **Descargar Excel XLSX**. El PDF se genera con jsPDF y AutoTable; XLSX es un libro real de ExcelJS con importes numéricos. Las bibliotecas se cargan al solicitar una exportación.
+Los cinco listados (Perfiles, Usuarios, Vehículos, Servicios y Órdenes) y los tres reportes permiten un menú **Exportar** con **Vista previa**, **Descargar documento** (PDF) y **Exportar a Excel**. El PDF se genera con jsPDF y AutoTable; XLSX es un libro real de ExcelJS con importes numéricos. Las bibliotecas se cargan al solicitar una exportación.
 
 Las exportaciones utilizan las mismas filas filtradas que la pantalla e incluyen la búsqueda, los estados y las fechas aplicables. Las referencias inactivas siguen disponibles para consultar los registros relacionados. No se exportan formularios, contraseñas ni hashes. Los botones se deshabilitan durante la carga, ante errores o sin resultados.
 
-La vista previa abre el documento en la misma página; se cierra con su botón o Escape. Si el visor PDF del navegador no está disponible, usar la descarga directa. Para documentos grandes, la generación puede tardar unos segundos.
+La vista previa abre el mismo PDF de la descarga en una pestaña nueva, mediante el visor del navegador. Para documentos grandes, la generación puede tardar unos segundos.
 
 El reporte **Órdenes con servicios** reutiliza los filtros del reporte de órdenes. Incluye todos los detalles de las órdenes seleccionadas y distingue los inactivos (no suman). El total de cada orden figura **una sola vez**, en la primera fila de sus detalles. El resumen suma únicamente las órdenes activas, una vez por orden; si se incluyen anuladas, sus importes se muestran como información y quedan fuera de ese resumen. Los totales no representan pagos ni utilidades.
 
-Se conserva **Descargar CSV** del resumen de órdenes y **Imprimir / guardar PDF**, que imprime los reportes visibles con sus filtros. CSV no equivale a XLSX. No se necesitan endpoints nuevos: los reportes usan los DTO existentes de órdenes, vehículos, usuarios, servicios y perfiles.
+**Imprimir** imprime los reportes visibles con sus filtros. No se necesitan endpoints nuevos: los reportes usan los DTO existentes de órdenes, vehículos, usuarios, servicios y perfiles.
 
 ## Orden para registrar datos
 
