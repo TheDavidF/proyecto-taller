@@ -21,8 +21,8 @@ export function mensajeError(error: unknown): string {
     return typeof datos?.mensaje === "string"
       ? datos.mensaje
       : error.response
-        ? `No se pudo completar la operación (HTTP ${error.response.status}).`
-        : "No se pudo conectar con el backend. Comprueba que esté funcionando en el puerto 8080.";
+        ? "No se pudo completar la operación."
+        : "No se pudo conectar con el servidor. Inténtalo de nuevo.";
   }
   return error instanceof Error
     ? error.message
