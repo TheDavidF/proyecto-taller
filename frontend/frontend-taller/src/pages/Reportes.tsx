@@ -7,14 +7,14 @@ import type { Servicio } from "../types/servicio";
 import type { Perfil } from "../types/perfil";
 import { useEffect, useState } from "react";
 import { Panel, Avisos, Etiqueta } from "../components/Controles";
-import { campo, boton, secundario } from "../components/estilos";
+import { campo, secundario } from "../components/estilos";
 import { listarOrdenes } from "../services/ordenServices";
 import { listarVehiculos } from "../services/vehiculoServices";
 import { listarUsuarios } from "../services/usuarioServices";
 import type { Orden } from "../types/orden";
 import type { Vehiculo } from "../types/vehiculo";
 import type { Usuario } from "../types/usuario";
-import { moneda, fecha, hoy, mensajeError, normalizar } from "../utils/formato";
+import { moneda, fecha, mensajeError, normalizar } from "../utils/formato";
 export default function Reportes() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
@@ -181,45 +181,6 @@ export default function Reportes() {
       ];
     }),
   };
-  function exportar() {
-    const celda = (v: unknown) => {
-      let s = String(v ?? "");
-      if (/^[=+@\-\t\r]/.test(s)) s = "'" + s;
-      return '"' + s.replaceAll('"', '""') + '"';
-    };
-    const datos = [
-      [
-        "Orden",
-        "Placa",
-        "Responsable",
-        "Ingreso",
-        "Entrega",
-        "Trabajo",
-        "Registro",
-        "Total Q",
-      ],
-      ...filas.map((o) => [
-        o.idOrden,
-        vehiculo(o.idVehiculo),
-        usuario(o.idUsuario),
-        o.fechaIngreso,
-        o.fechaEntrega ?? "",
-        o.estadoOrden,
-        o.estado ? "Activa" : "Anulada",
-        Number(o.total).toFixed(2),
-      ]),
-    ];
-    const blob = new Blob(
-      ["\uFEFF" + datos.map((f) => f.map(celda).join(";")).join("\r\n")],
-      { type: "text/csv;charset=utf-8;" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ordenes-${hoy()}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
   return (
     <div className="space-y-6">
       <Avisos error={error} mensaje="" />
@@ -293,10 +254,7 @@ export default function Reportes() {
             <strong className="text-2xl text-azul">
               {error || cargando ? "—" : moneda(total)}
             </strong>
-            <p className="mt-1 text-xs">
-              Este importe corresponde a trabajos registrados; no representa
-              cobros ni utilidades.
-            </p>
+
           </div>
         </div>
         <Exportaciones
@@ -304,18 +262,6 @@ export default function Reportes() {
           deshabilitado={cargando || Boolean(error) || fechasInvalidas}
         />
         <div className="no-print mb-5 flex flex-wrap gap-3">
-          <button
-            className={boton}
-            disabled={
-              cargando ||
-              Boolean(error) ||
-              fechasInvalidas ||
-              filas.length === 0
-            }
-            onClick={exportar}
-          >
-            Descargar CSV
-          </button>
           <button
             className={secundario}
             disabled={
@@ -326,7 +272,7 @@ export default function Reportes() {
             }
             onClick={() => window.print()}
           >
-            Imprimir / guardar PDF
+            Imprimir
           </button>
           <button
             className={secundario}
