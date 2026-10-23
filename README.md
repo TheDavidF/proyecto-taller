@@ -7,3 +7,5 @@ Aplicación universitaria para gestionar perfiles, usuarios, vehículos, servici
 - Esquema inicial: `database/database.sql`.
 
 Consultar [configuración, endpoints, ejemplos y pruebas del backend](backend/taller/README.md).
+
+Consultar [ejecución del frontend, exportaciones y reportes](frontend/frontend-taller/README.md). Usar `npm ci` dentro de `frontend/frontend-taller`, no en la carpeta superior.

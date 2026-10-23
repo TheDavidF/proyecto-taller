@@ -1,3 +1,4 @@
+import Exportaciones from "../components/Exportaciones";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Panel, Avisos, Etiqueta, Estado } from "../components/Controles";
@@ -174,7 +175,7 @@ export default function Ordenes() {
     if (
       form.detalles.some(
         (d) =>
-          !servicios.some((s) => s.idServicio === d.idServicio && s.estado) ||
+          !servicios.some((s) => s.idServicio === d.idServicio && (s.estado || (!d.estado && Boolean(d.idDetalleOrden)))) ||
           !Number.isFinite(Number(d.precioAplicado)) ||
           Number(d.precioAplicado) < 0 ||
           !/^\d+(\.\d{1,2})?$/.test(String(d.precioAplicado)) ||
@@ -273,8 +274,7 @@ export default function Ordenes() {
       >
         {!cargando && !errorCarga && faltanCatalogos && (
           <p className="mb-4 rounded-lg bg-crema p-3">
-            Primero registra un perfil, un usuario, un vehículo y un servicio
-            activos en sus módulos.
+            No hay suficientes registros activos para crear una orden.
           </p>
         )}
         <form onSubmit={guardar}>
@@ -398,7 +398,7 @@ export default function Ordenes() {
             </div>
             {form.detalles.length === 0 && (
               <p className="rounded-lg bg-crema p-4 text-sm">
-                Agrega los servicios que se realizarán en este vehículo.
+                Sin servicios agregados.
               </p>
             )}
             {form.detalles.map((d, i) => (
@@ -505,7 +505,7 @@ export default function Ordenes() {
                         }));
                       }}
                     />{" "}
-                    Incluir en el total
+                    Servicio activo
                   </label>
                   <button
                     type="button"
@@ -513,11 +513,13 @@ export default function Ordenes() {
                     onClick={() =>
                       setForm((prev) => ({
                         ...prev,
-                        detalles: prev.detalles.filter((_, j) => j !== i),
+                        detalles: d.idDetalleOrden
+                          ? prev.detalles.map((item, j) => j === i ? { ...item, estado: false } : item)
+                          : prev.detalles.filter((_, j) => j !== i),
                       }))
                     }
                   >
-                    Quitar
+                    {d.idDetalleOrden ? "Anular servicio" : "Quitar"}
                   </button>
                 </div>
               </div>
@@ -599,6 +601,34 @@ export default function Ordenes() {
             Actualizar datos
           </button>
         </div>
+        <Exportaciones
+          deshabilitado={cargando || errorCarga || ocupado}
+          tabla={{
+            titulo: "Listado de Órdenes",
+            archivo: "ordenes",
+            filtros: `Búsqueda: ${busqueda.trim() || "Todas"} · Trabajo: ${filtroEstado.replaceAll("_", " ") || "Todos"} · ${todos ? "Activas y anuladas" : "Solo activas"}`,
+            columnas: [
+              { titulo: "Orden" },
+              { titulo: "Vehículo" },
+              { titulo: "Responsable" },
+              { titulo: "Ingreso" },
+              { titulo: "Entrega" },
+              { titulo: "Trabajo" },
+              { titulo: "Registro" },
+              { titulo: "Total Q", moneda: true },
+            ],
+            filas: filas.map((f) => [
+              f.idOrden,
+              vehiculoTexto(f.idVehiculo),
+              usuarioTexto(f.idUsuario),
+              fecha(f.fechaIngreso),
+              fecha(f.fechaEntrega),
+              f.estadoOrden.replaceAll("_", " "),
+              f.estado ? "Activa" : "Anulada",
+              f.total,
+            ]),
+          }}
+        />
         {cargando ? (
           <p>Cargando...</p>
         ) : errorCarga ? (

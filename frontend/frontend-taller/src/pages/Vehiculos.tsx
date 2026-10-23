@@ -1,3 +1,4 @@
+import Exportaciones from "../components/Exportaciones";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Panel, Avisos, Etiqueta, Estado } from "../components/Controles";
@@ -216,6 +217,32 @@ export default function Vehiculos() {
             Actualizar listado
           </button>
         </div>
+        <Exportaciones
+          deshabilitado={c.cargando || c.errorCarga || c.ocupado}
+          tabla={{
+            titulo: "Listado de Vehículos",
+            archivo: "vehiculos",
+            filtros: `Búsqueda: ${busqueda.trim() || "Todas"} · ${todos ? "Activos e inactivos" : "Solo activos"}`,
+            columnas: [
+              { titulo: "ID" },
+              { titulo: "Placa" },
+              { titulo: "Marca" },
+              { titulo: "Modelo" },
+              { titulo: "Propietario" },
+              { titulo: "Teléfono" },
+              { titulo: "Estado" },
+            ],
+            filas: filas.map((f) => [
+              f.idVehiculo,
+              f.placa,
+              f.marca,
+              f.modelo,
+              f.propietario,
+              f.telefonoPropietario,
+              f.estado ? "Activo" : "Inactivo",
+            ]),
+          }}
+        />
         {c.cargando ? (
           <p>Cargando...</p>
         ) : c.errorCarga ? (

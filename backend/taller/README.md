@@ -19,6 +19,51 @@ Linux/macOS: exportar las mismas variables y ejecutar `bash mvnw spring-boot:run
 La API escucha en `http://localhost:8080/api`. `PORT` permite cambiar el puerto.
 Hibernate valida las tablas existentes; no las modifica ni elimina.
 
+## Acceso y administrador inicial
+
+El login utiliza una sesión de servidor y una cookie HttpOnly, sin guardar tokens en localStorage.
+Las cuentas y sus perfiles deben estar activos. Los perfiles `Administrador` (o `Admin`) y `Empleado`
+permiten iniciar sesión; otros nombres no conceden acceso. El nombre no distingue mayúsculas.
+
+Si ya tienes una cuenta activa de administrador con contraseña BCrypt, inicia sesión con ella.
+Si necesitas crear una cuenta inicial, define en PowerShell antes de arrancar el backend:
+
+```powershell
+$env:ADMIN_USER="admin"
+$claveInicial = Read-Host "Contraseña inicial (mínimo 8 caracteres)" -AsSecureString
+$env:ADMIN_PASSWORD=[System.Net.NetworkCredential]::new("", $claveInicial).Password
+.\mvnw.cmd spring-boot:run
+```
+
+Solo se crea la cuenta si ese usuario no existe; no reemplaza cuentas ni restablece contraseñas.
+También crea los perfiles Administrador y Empleado si hacen falta. No hay contraseña predeterminada.
+Tras el primer arranque, detener el backend, retirar `ADMIN_PASSWORD` y `ADMIN_USER` de la terminal
+(`Remove-Item Env:ADMIN_PASSWORD, Env:ADMIN_USER`) y volver a arrancar normalmente.
+Las contraseñas antiguas en texto plano deben actualizarse desde Usuarios con una sesión de administrador.
+
+| Operación | Administrador | Empleado |
+|---|---|---|
+| Administrar usuarios y perfiles | Sí | No |
+| Vehículos, servicios y órdenes | Sí | Sí |
+| Reportes y exportaciones | Sí | Sí |
+| Consultar usuarios/perfiles para responsables y reportes | Sí | Solo lectura |
+
+La API comprueba el estado y rol actuales en cada solicitud. Desactivar la cuenta o su perfil
+revoca el acceso en la siguiente solicitud. La sesión vence tras 30 minutos sin actividad.
+
+| Endpoint | Uso |
+|---|---|
+| GET /api/auth/csrf | Devuelve `token` y `headerName`; público |
+| POST /api/auth/login | Formulario `application/x-www-form-urlencoded`: `usuario`, `contrasena`; 204 o 401 |
+| GET /api/auth/me | Datos de la sesión, sin contraseña; 200 o 401 |
+| POST /api/auth/logout | Invalida la sesión; 204 |
+
+Antes de POST/PUT/DELETE, obtener CSRF y enviarlo en el encabezado indicado, conservando las cookies.
+Obtener un token nuevo tras login y logout. Axios ya lo hace automáticamente.
+Para Postman, conservar la cookie de sesión y enviar también el token CSRF.
+Usar el mismo host en frontend y backend (por ejemplo, ambos `localhost`). En HTTPS configurar
+`SESSION_COOKIE_SECURE=true` y los orígenes concretos en `CORS_ALLOWED_ORIGINS`.
+
 ## Contrato común
 
 Los recursos son `perfiles`, `servicios`, `usuarios`, `vehiculos` y `ordenes`.
@@ -62,7 +107,7 @@ Crear primero perfil, servicio, vehículo y usuario; después la orden. Sustitui
 {"idPerfil":1,"nombre":"David Cano","usuario":"david","contrasena":"UnaClave123","correo":"david@example.com"}
 ```
 
-La contraseña requiere al menos 8 caracteres y como máximo 72 bytes UTF-8. Se almacena con BCrypt y nunca se devuelve, tampoco su hash. En PUT omitir `contrasena` para conservarla o enviar una nueva para cambiarla. Los registros previos no se convierten automáticamente: para reemplazar una clave anterior, actualizarla por este endpoint. Esta API no implementa login, sesiones ni autorización; perfiles son un catálogo, no permisos de acceso aplicados. No publicar la API en Internet sin implementar esos controles.
+La contraseña requiere al menos 8 caracteres y como máximo 72 bytes UTF-8. Se almacena con BCrypt y nunca se devuelve, tampoco su hash. En PUT omitir `contrasena` para conservarla o enviar una nueva para cambiarla. Los registros previos no se convierten automáticamente: para reemplazar una clave anterior, actualizarla por este endpoint. La API exige sesión y permisos según el perfil.
 
 **/ordenes**
 ```json
@@ -82,11 +127,11 @@ Estados de trabajo admitidos: `PENDIENTE`, `EN_PROCESO`, `FINALIZADA`, `ENTREGAD
 
 El total enviado por el cliente se ignora: se suman los precios aplicados de los detalles activos. Los precios aplicados pueden diferir del precio base (cotización del trabajo), pero deben ser no negativos y tener hasta dos decimales. El total máximo es 99,999,999.99. La orden requiere al menos un detalle activo y fecha de entrega igual o posterior al ingreso.
 
-Al editar una orden, enviar la lista completa de detalles deseados: conservar `idDetalleOrden` de los existentes, omitirlo para los nuevos y quitar de la lista los que deban eliminarse. Un ID ajeno o repetido devuelve 400. Los detalles omitidos se eliminan físicamente dentro de la transacción; la anulación de la orden, en cambio, conserva todos los detalles. No hay endpoint independiente de detalles.
+Al editar una orden, enviar la lista completa de detalles deseados: conservar `idDetalleOrden` de los existentes, omitirlo para los nuevos y quitar de la lista los que deban eliminarse. Un ID ajeno o repetido devuelve 400. Los detalles omitidos se conservan con `estado=false` dentro de la transacción. Se pueden reactivar enviando su ID y `estado=true`. La anulación de la orden conserva todos los detalles. No hay endpoint independiente de detalles.
 
 ## Errores
 
-400: validación o JSON incorrecto; 404: registro o relación inexistente; 409: duplicado o relación inactiva.
+401: sesión ausente, vencida o cuenta inactiva; 403: permiso insuficiente o token CSRF inválido; 400: validación o JSON incorrecto; 404: registro o relación inexistente; 409: duplicado o relación inactiva.
 
 ```json
 {"fecha":"2026-10-20T00:00:00Z","status":400,"mensaje":"Revisa los campos enviados","ruta":"/api/servicios","errores":{"precioBase":"debe ser mayor o igual que 0.00"}}
@@ -100,7 +145,7 @@ El frontend puede usar `error.response.data.mensaje` y `errores` para mostrar av
 .\mvnw.cmd test
 ```
 
-Las pruebas usan H2 aislado y no acceden a tu MySQL. Verifican HTTP real, validación, anulación, BCrypt, CORS, actualización de detalles y rollback. Para una comprobación adicional con MySQL de prueba, establecer `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWORD`, `TEST_DB_DRIVER=com.mysql.cj.jdbc.Driver`. **Las pruebas borran y recrean las tablas de esa base; jamás apuntar a datos reales.**
+Las pruebas usan H2 aislado y no acceden a tu MySQL. Verifican HTTP real, login, CSRF, permisos, cierre de sesión, revocación de cuentas/perfiles, validación, anulación, BCrypt, CORS, eliminación lógica de detalles y rollback. Para una comprobación adicional con MySQL de prueba, establecer `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWORD`, `TEST_DB_DRIVER=com.mysql.cj.jdbc.Driver`. **Las pruebas borran y recrean las tablas de esa base; jamás apuntar a datos reales.**
 
 Las pruebas de integración pueden ejecutarse con `-Dtest=ApiIntegrationTests`. En Linux/macOS usar `bash mvnw` en los comandos equivalentes.
 

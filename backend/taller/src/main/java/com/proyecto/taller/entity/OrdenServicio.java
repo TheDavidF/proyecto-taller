@@ -50,6 +50,6 @@ public class OrdenServicio {
     @Column(name = "estado", nullable = false)
     private Boolean estado = true;
 
-    @OneToMany(mappedBy = "ordenServicio", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "ordenServicio", cascade = CascadeType.ALL)
     private List<DetalleOrden> detalles = new ArrayList<>();
 }

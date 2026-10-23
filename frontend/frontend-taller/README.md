@@ -7,7 +7,7 @@ React + TypeScript + Vite + Tailwind CSS + Axios + React Router.
 Desde esta carpeta:
 
 ```powershell
-npm install
+npm ci
 ```
 
 Si no existe `.env`, copiar `.env.example` a `.env`:
@@ -21,17 +21,38 @@ La variable es `VITE_API_URL=http://localhost:8080`. No agregar `/api` al final.
 
 Usar Node.js 22.12 o posterior compatible con Vite 8 (también funciona Node 24). Este paquete no modifica el backend ni crea datos automáticamente.
 
+Linux/macOS, desde `frontend/frontend-taller`:
+
+```bash
+npm ci
+if [ ! -f .env ]; then cp .env.example .env; fi
+npm run dev
+```
+
+`.env.example` está versionado y permitido por `.gitignore`; `.env` y sus valores locales permanecen ignorados. No incluir credenciales en variables `VITE_*`: se publican en el navegador.
+
 ## Módulos incluidos
 
+- Login, persistencia de sesión al recargar, cierre de sesión y acceso por perfil.
 - Inicio y navegación adaptable a pantallas pequeñas.
 - Perfiles: listar, buscar, crear, editar, anular y reactivar.
 - Usuarios: selección de perfil activo, crear, editar sin cambiar contraseña si se deja vacía, anular y reactivar.
 - Vehículos: placa, marca, modelo, propietario, teléfono; CRUD y estados.
 - Servicios: nombre y precio base; CRUD y estados.
 - Órdenes: vehículo, responsable con perfil activo, fechas, estado de trabajo, varios servicios, precios y observaciones editables; total, listado, búsqueda, filtro por trabajo, detalle, edición, anulación y reactivación.
-- Reportes: filtro por fecha de ingreso y estado, total de órdenes activas filtradas, exportación CSV e impresión/guardar PDF desde el navegador.
+- Reportes: órdenes relacionadas con vehículo, propietario y responsable; órdenes con servicios, precios aplicados, observaciones y estado de cada detalle; usuarios relacionados con perfiles. Filtros por fecha de ingreso y estado de trabajo/anulación para órdenes, y búsqueda e inclusión de inactivos para usuarios.
 
-La exportación CSV se puede abrir con Excel, pero no es un archivo XLSX. El PDF se guarda usando el diálogo de impresión del navegador. Los totales de órdenes no representan pagos ni utilidades; el modelo actual no tiene un módulo de cobros.
+## Exportaciones
+
+Los cinco listados (Perfiles, Usuarios, Vehículos, Servicios y Órdenes) y los tres reportes permiten un menú **Exportar** con **Vista previa**, **Descargar documento** (PDF) y **Exportar a Excel**. El PDF se genera con jsPDF y AutoTable; XLSX es un libro real de ExcelJS con importes numéricos. Las bibliotecas se cargan al solicitar una exportación.
+
+Las exportaciones utilizan las mismas filas filtradas que la pantalla e incluyen la búsqueda, los estados y las fechas aplicables. Las referencias inactivas siguen disponibles para consultar los registros relacionados. No se exportan formularios, contraseñas ni hashes. Los botones se deshabilitan durante la carga, ante errores o sin resultados.
+
+La vista previa abre el mismo PDF de la descarga en una pestaña nueva, mediante el visor del navegador. Para documentos grandes, la generación puede tardar unos segundos.
+
+El reporte **Órdenes con servicios** reutiliza los filtros del reporte de órdenes. Incluye todos los detalles de las órdenes seleccionadas y distingue los inactivos (no suman). El total de cada orden figura **una sola vez**, en la primera fila de sus detalles. El resumen suma únicamente las órdenes activas, una vez por orden; si se incluyen anuladas, sus importes se muestran como información y quedan fuera de ese resumen. Los totales no representan pagos ni utilidades.
+
+**Imprimir** imprime los reportes visibles con sus filtros. No se necesitan endpoints nuevos: los reportes usan los DTO existentes de órdenes, vehículos, usuarios, servicios y perfiles.
 
 ## Orden para registrar datos
 
@@ -48,11 +69,11 @@ Los datos se guardan en tu MySQL a través de la API. No se usan registros simul
 ## Particularidades de órdenes
 
 - Cada fila de servicio permite cambiar precio y observaciones directamente.
-- "Incluir en el total" corresponde al campo `estado` del detalle. Los detalles desmarcados se guardan como inactivos y no suman.
+- "Servicio activo" corresponde al campo `estado` del detalle. Los detalles desmarcados se guardan como inactivos y no suman.
 - Se exige al menos un detalle activo.
 - El servidor vuelve a calcular el total; el frontend no envía el total como autoridad.
 - Al editar se conservan los IDs de los detalles existentes.
-- Quitar un detalle de una orden y guardar lo elimina de esa orden. Anular la orden conserva todo su historial.
+- Anular un servicio ya guardado conserva su detalle con `estado=false`; se puede reactivar con "Servicio activo". Quitar un servicio nuevo lo retira del formulario. Anular la orden conserva todo su historial.
 - Un vehículo, usuario/perfil o servicio inactivo no puede usarse al guardar una orden. El formulario muestra la referencia histórica y permite sustituirla por una activa.
 - El estado de trabajo admite PENDIENTE, EN_PROCESO, FINALIZADA y ENTREGADA. La anulación es un estado independiente y no cambia el trabajo.
 
@@ -87,12 +108,14 @@ npm run build
 npm run lint
 ```
 
-No se incluyen archivos de pruebas automatizadas. La compilación y la revisión de código no reemplazan la comprobación manual con tu MySQL.
+No se agregan pruebas automatizadas al frontend. El backend conserva sus pruebas existentes con H2: desde `backend/taller`, ejecutar `bash mvnw test` (o `.\mvnw.cmd test` en PowerShell).
+
+Para revisar manualmente las exportaciones en una base de práctica: filtrar un listado, incluir/excluir inactivos y comparar las filas del PDF y XLSX con la tabla; abrir la vista previa; comprobar una orden con varios detalles activos/inactivos y verificar que su total aparece una sola vez en el reporte detallado. Probar un filtro sin resultados y un intervalo inválido. No usar datos reales ni apuntar las pruebas de backend a una base que quieras conservar.
 
 ## Alcance
 
-Este frontend corresponde al backend preparado en esta conversación: rutas `/api/perfiles`, `/api/usuarios`, `/api/vehiculos`, `/api/servicios`, `/api/ordenes`, parámetro `incluirInactivos` y operaciones `/anular` y `/activar`.
+Este frontend utiliza el backend del taller: rutas `/api/perfiles`, `/api/usuarios`, `/api/vehiculos`, `/api/servicios`, `/api/ordenes`, parámetro `incluirInactivos` y operaciones `/anular` y `/activar`.
 
-No implementa autenticación, sesiones ni autorización: el backend actual tampoco tiene endpoints de login. Perfiles es un catálogo de asignación de usuarios, no un sistema de permisos. No se agregaron pantallas de login que aparenten proteger la API.
+El acceso requiere login. Administrador administra todos los módulos; Empleado opera vehículos, servicios, órdenes y reportes. Usuarios y Perfiles se restringen en navegación y rutas, y el backend bloquea sus escrituras para empleados. La sesión usa cookie HttpOnly, con credenciales CORS y protección CSRF. No se almacenan contraseñas ni tokens en localStorage. El administrador inicial se configura siguiendo `backend/taller/README.md`.
 
 No subir `.env`, `node_modules` ni `dist`. El archivo `.env.example` sí se puede compartir. Conserva `package-lock.json` para instalar las mismas versiones.

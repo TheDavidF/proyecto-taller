@@ -1,3 +1,10 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Login from "./pages/Login";
+import { consultarSesion, cerrarSesion } from "./services/accesoServices";
+import type { Sesion } from "./services/accesoServices";
+import { mensajeError } from "./utils/formato";
+import { Avisos } from "./components/Controles";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import Inicio from "./pages/Inicio";
 import Perfiles from "./pages/Perfiles";
@@ -16,6 +23,28 @@ const enlaces = [
   { ruta: "/reportes", nombre: "Reportes" },
 ];
 export default function App() {
+  const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [saliendo, setSaliendo] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let vigente = true;
+    const expirar = () => { setSesion(null); setError("Tu sesión terminó. Ingresa nuevamente."); };
+    window.addEventListener("sesion-expirada", expirar);
+    consultarSesion().then(({ data }) => { if (vigente) { setSesion(data); setError(""); } })
+      .catch((e) => { if (vigente) setError(axios.isAxiosError(e) && e.response?.status === 401 ? "" : mensajeError(e)); })
+      .finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; window.removeEventListener("sesion-expirada", expirar); };
+  }, []);
+  async function salir() {
+    setSaliendo(true); setError("");
+    try { await cerrarSesion(); setSesion(null); }
+    catch (e) { setError(mensajeError(e)); }
+    finally { setSaliendo(false); }
+  }
+  if (cargando) return <main className="p-8 text-center">Cargando...</main>;
+  if (!sesion) return <Login aviso={error} alIngresar={(actual) => { setSesion(actual); setError(""); }} />;
+  const administrador = sesion.rol === "ADMIN";
   return (
     <div className="min-h-screen">
       <header className="border-b-4 border-coral bg-azul text-white">
@@ -29,9 +58,13 @@ export default function App() {
               Vehículos, servicios y órdenes de trabajo
             </p>
           </div>
-          <span className="rounded-full border border-white/30 px-4 py-2 text-sm">
-            Control de operaciones
-          </span>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span>{sesion.nombre} · {sesion.perfil}</span>
+            <button type="button" disabled={saliendo} onClick={() => void salir()}
+              className="rounded-lg border border-white/40 px-4 py-2 hover:bg-white/10 disabled:opacity-60">
+              {saliendo ? "Saliendo..." : "Cerrar sesión"}
+            </button>
+          </div>
         </div>
       </header>
       <nav
@@ -39,7 +72,7 @@ export default function App() {
         className="border-b border-cafe/10 bg-white"
       >
         <div className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 py-3 sm:px-6">
-          {enlaces.map((e) => (
+          {enlaces.filter((e) => administrador || !["/perfiles", "/usuarios"].includes(e.ruta)).map((e) => (
             <NavLink
               key={e.ruta}
               to={e.ruta}
@@ -54,10 +87,11 @@ export default function App() {
         </div>
       </nav>
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <Avisos error={error} mensaje="" />
         <Routes>
-          <Route path="/" element={<Inicio />} />
-          <Route path="/perfiles" element={<Perfiles />} />
-          <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/" element={<Inicio administrador={administrador} />} />
+          <Route path="/perfiles" element={administrador ? <Perfiles /> : <Navigate to="/" replace />} />
+          <Route path="/usuarios" element={administrador ? <Usuarios /> : <Navigate to="/" replace />} />
           <Route path="/vehiculos" element={<Vehiculos />} />
           <Route path="/servicios" element={<Servicios />} />
           <Route path="/ordenes" element={<Ordenes />} />

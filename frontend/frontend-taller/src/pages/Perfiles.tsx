@@ -1,3 +1,4 @@
+import Exportaciones from "../components/Exportaciones";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Panel, Avisos, Etiqueta, Estado } from "../components/Controles";
@@ -133,6 +134,24 @@ export default function Perfiles() {
             Actualizar listado
           </button>
         </div>
+        <Exportaciones
+          deshabilitado={c.cargando || c.errorCarga || c.ocupado}
+          tabla={{
+            titulo: "Listado de perfiles",
+            archivo: "perfiles",
+            filtros: `Búsqueda: ${busqueda.trim() || "Todas"} · ${todos ? "Activos e inactivos" : "Solo activos"}`,
+            columnas: [
+              { titulo: "ID" },
+              { titulo: "Nombre" },
+              { titulo: "Estado" },
+            ],
+            filas: filas.map((f) => [
+              f.idPerfil,
+              f.nombre,
+              f.estado ? "Activo" : "Inactivo",
+            ]),
+          }}
+        />
         {c.cargando ? (
           <p>Cargando...</p>
         ) : c.errorCarga ? (
