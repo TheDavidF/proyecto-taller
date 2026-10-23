@@ -274,8 +274,7 @@ export default function Ordenes() {
       >
         {!cargando && !errorCarga && faltanCatalogos && (
           <p className="mb-4 rounded-lg bg-crema p-3">
-            Primero registra un perfil, un usuario, un vehículo y un servicio
-            activos en sus módulos.
+            No hay suficientes registros activos para crear una orden.
           </p>
         )}
         <form onSubmit={guardar}>
@@ -399,7 +398,7 @@ export default function Ordenes() {
             </div>
             {form.detalles.length === 0 && (
               <p className="rounded-lg bg-crema p-4 text-sm">
-                Agrega los servicios que se realizarán en este vehículo.
+                Sin servicios agregados.
               </p>
             )}
             {form.detalles.map((d, i) => (
