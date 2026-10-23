@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@theme {
+  --color-crema: #f5ebdd;
+  --color-coral: #f2765e;
+  --color-azul: #315b8c;
+  --color-cafe: #413333;
+}
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #413333;
+  background: #f5ebdd;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button:not(:disabled),
+select:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #315b8c;
+  outline-offset: 3px;
+}
+th,
+td {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+}
+thead {
+  background: #315b8c;
+  color: white;
+}
+tbody tr {
+  border-bottom: 1px solid #41333318;
+}
+tbody tr:nth-child(even) {
+  background: #f5ebdd60;
+}
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  th,
+  td {
+    padding: 4px;
+    overflow-wrap: anywhere;
+    white-space: normal !important;
+  }
+
+  .no-print,
+  header,
+  nav,
+  footer {
+    display: none !important;
+  }
+  body {
+    background: white;
+    font-size: 10pt;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  section {
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+  table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 8pt;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  thead {
+    background: white;
+    color: #413333;
+    border-bottom: 2px solid #413333;
+  }
+}
